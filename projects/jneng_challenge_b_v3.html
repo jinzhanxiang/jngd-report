@@ -1,0 +1,1829 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V3.0 LLM Prompt 驱动防幻觉核查 · 晶能光电（自动提取）</title>
+<style>
+:root {
+    --primary: #1a365d;
+    --accent: #d69e2e;
+    --verified: #48bb78;
+    --conflict: #f56565;
+    --pending: #ed8936;
+    --hallucination: #e53e3e;
+    --self-contained: #4299e1;
+    --metadata: #805ad5;
+    --calculation: #38b2ac;
+    --manual-review: #d69e2e;
+    --unverifiable: #a0aec0;
+    --bg: #fafaf9;
+    --text: #2d3748;
+    --border: #e2e8f0;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #1a202c;
+        --text: #e2e8f0;
+        --border: #2d3748;
+        --shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+        --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.6);
+    }
+    body { color: var(--text); }
+    .section, .dash-card { background: #2d3748 !important; }
+    .section-title { color: #90cdf4; }
+    .page-header { color: white; }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 40px 20px;
+    transition: background 0.3s, color 0.3s;
+}
+.container { max-width: 1280px; margin: 0 auto; }
+
+.page-header {
+    text-align: center;
+    padding: 40px 20px;
+    background: linear-gradient(135deg, var(--primary), #2c5282);
+    color: white;
+    border-radius: 16px;
+    margin-bottom: 40px;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+}
+.page-header h1 { font-size: 32px; margin-bottom: 10px; }
+.page-header .subtitle { opacity: 0.9; font-size: 14px; }
+.version-tag {
+    display: inline-block;
+    background: var(--accent);
+    color: var(--primary);
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-left: 8px;
+    letter-spacing: 1px;
+}
+.methodology-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.15);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    margin-top: 12px;
+    border: 1px solid rgba(255,255,255,0.25);
+}
+
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 30px;
+}
+.dash-card {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    text-align: center;
+    border-top: 4px solid var(--primary);
+    transition: transform 0.2s;
+}
+.dash-card:hover { transform: translateY(-4px); }
+.dash-card.hallucination { border-top-color: var(--hallucination); }
+.dash-card.verified { border-top-color: var(--verified); }
+.dash-card.pending { border-top-color: var(--pending); }
+.dash-card.conflict { border-top-color: var(--conflict); }
+.dash-card.self-contained { border-top-color: var(--self-contained); }
+.dash-label { font-size: 11px; color: #718096; text-transform: uppercase; letter-spacing: 1px; }
+.dash-value { font-size: 42px; font-weight: 700; color: var(--primary); margin-top: 8px; }
+.dash-card.hallucination .dash-value { color: var(--hallucination); }
+.dash-card.verified .dash-value { color: var(--verified); }
+.dash-card.pending .dash-value { color: var(--pending); }
+.dash-card.conflict .dash-value { color: var(--conflict); }
+.dash-card.self-contained .dash-value { color: var(--self-contained); }
+
+.gate-card {
+    background: linear-gradient(135deg, var(--verified), #38a169);
+    color: white;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-lg);
+}
+.gate-card.fail { background: linear-gradient(135deg, var(--hallucination), #c53030); }
+.gate-badge {
+    display: inline-block;
+    padding: 6px 20px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.2);
+    margin-left: 12px;
+    font-size: 14px;
+}
+
+.section {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+}
+.section-title {
+    font-size: 22px;
+    color: var(--primary);
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.section-title .step {
+    background: var(--primary);
+    color: white;
+    font-size: 13px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+.section h3 {
+    margin: 20px 0 12px;
+    color: #2c5282;
+    font-size: 16px;
+}
+
+.footer {
+    text-align: center;
+    color: #718096;
+    font-size: 12px;
+    padding: 30px 0;
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="page-header">
+        <h1>防幻觉核查报告
+            <span class="version-tag">V3.0</span>
+        </h1>
+        <div class="subtitle">V1 报告：晶能光电（自动提取） | 2026-07-04 16:21 北京时间</div>
+        <div class="methodology-badge">LLM Prompt 驱动 · 5 源接入 · 141 数据点全量评估</div>
+    </div>
+
+    <!-- 5 KPI 卡片 + 防幻觉门槛 Gate -->
+    <div class="dashboard">
+        <div class="dash-card">
+            <div class="dash-label">总数据点</div>
+            <div class="dash-value">141</div>
+        </div>
+        <div class="dash-card verified">
+            <div class="dash-label">LLM 跨源调用</div>
+            <div class="dash-value">30</div>
+        </div>
+        <div class="dash-card self-contained">
+            <div class="dash-label">内部一致性</div>
+            <div class="dash-value">90</div>
+        </div>
+        <div class="dash-card pending">
+            <div class="dash-label">待人工复核</div>
+            <div class="dash-value">51</div>
+        </div>
+        <div class="dash-card verified">
+            <div class="dash-label">幻觉数</div>
+            <div class="dash-value">0</div>
+        </div>
+    </div>
+    <div class="gate-card">
+        🟢 防幻觉门槛：通过
+        <span class="gate-badge">幻觉数=0, 冲突数=0 ✅ PASS</span>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">
+            <span class="step">Step 3</span>
+            评估标签分布
+        </h2>
+        
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="background: #f7fafc; border-bottom: 2px solid var(--border);">
+                <th style="padding: 12px; text-align: left;">评估标签</th>
+                <th style="padding: 12px; text-align: center;">数量</th>
+                <th style="padding: 12px; text-align: center;">占比</th>
+            </tr>
+        </thead>
+        <tbody>
+            
+        <tr>
+            <td style="padding: 8px;"><span style="display:inline-block;padding:2px 10px;border-radius:6px;background:#4299e122;color:#4299e1;font-weight:600;font-size:13px;">[内部一致性]</span></td>
+            <td style="padding: 8px; text-align: center; font-weight: 600;">73</td>
+            <td style="padding: 8px; text-align: center; color: #718096;">51.8%</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px;"><span style="display:inline-block;padding:2px 10px;border-radius:6px;background:#ed893622;color:#ed8936;font-weight:600;font-size:13px;">[待核实]</span></td>
+            <td style="padding: 8px; text-align: center; font-weight: 600;">27</td>
+            <td style="padding: 8px; text-align: center; color: #718096;">19.1%</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px;"><span style="display:inline-block;padding:2px 10px;border-radius:6px;background:#ed893622;color:#ed8936;font-weight:600;font-size:13px;">[需人工复核计算逻辑]</span></td>
+            <td style="padding: 8px; text-align: center; font-weight: 600;">19</td>
+            <td style="padding: 8px; text-align: center; color: #718096;">13.5%</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px;"><span style="display:inline-block;padding:2px 10px;border-radius:6px;background:#805ad522;color:#805ad5;font-weight:600;font-size:13px;">[元数据自洽]</span></td>
+            <td style="padding: 8px; text-align: center; font-weight: 600;">17</td>
+            <td style="padding: 8px; text-align: center; color: #718096;">12.1%</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px;"><span style="display:inline-block;padding:2px 10px;border-radius:6px;background:#e53e3e22;color:#e53e3e;font-weight:600;font-size:13px;">[未标注]</span></td>
+            <td style="padding: 8px; text-align: center; font-weight: 600;">3</td>
+            <td style="padding: 8px; text-align: center; color: #718096;">2.1%</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px;"><span style="display:inline-block;padding:2px 10px;border-radius:6px;background:#a0aec022;color:#a0aec0;font-weight:600;font-size:13px;">[未上市]</span></td>
+            <td style="padding: 8px; text-align: center; font-weight: 600;">2</td>
+            <td style="padding: 8px; text-align: center; color: #718096;">1.4%</td>
+        </tr>
+        </tbody>
+    </table>
+    
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">
+            <span class="step">Step 3</span>
+            数据点详情（按一致性分组，可展开/折叠）
+        </h2>
+        
+        <details style="margin-bottom: 14px;">
+            <summary style="cursor: pointer; padding: 10px; background: #a0aec011; border-left: 4px solid #a0aec0; font-weight: 600; border-radius: 6px;">
+                ⚠️ 待核实（unverifiable） · 32 项
+            </summary>
+            <div style="padding: 10px; overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead>
+                        <tr style="background: #edf2f7; color: #2d3748;">
+                            <th style="padding: 8px; text-align: left;">数据点</th>
+                            <th style="padding: 8px; text-align: left;">声称来源</th>
+                            <th style="padding: 8px; text-align: left;">主体</th>
+                            <th style="padding: 8px; text-align: center;">来源可靠度</th>
+                            <th style="padding: 8px; text-align: left;">评估标签</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">26,554.11万股</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[未上市]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">68.21%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">4,587.70万股</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">11.79%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">1,505.45万股</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">上汽系资本</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">3.87%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">上汽系资本</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">938.40万股</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">深圳车仆实业有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">2.41%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">深圳车仆实业有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">690.00万股</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">金沙江资本</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">1.77%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">金沙江资本</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">627.27万股</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">RC持股</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">1.61%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">RC持股</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">627.27万股</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">北京博华资本</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">376.36万股</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">星宇股份</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">0.97%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">星宇股份</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">263.45万股</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">江西开元利咨询</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">262.83万股</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">江西明达投资</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">2,495.07万股</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">自然人投资者(7位)</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">6.41%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">自然人投资者(7位)</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">38,927.92万股</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[未上市]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">100.00%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[股权结构图]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">2.08</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[可比公司公开数据]</td>
+                <td style="padding: 10px; max-width: 140px;">三安光电</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">1.61</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[可比公司公开数据]</td>
+                <td style="padding: 10px; max-width: 140px;">华灿光电</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[未标注]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">0.59</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[可比公司公开数据]</td>
+                <td style="padding: 10px; max-width: 140px;">兆驰股份</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">0.78</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[可比公司公开数据]</td>
+                <td style="padding: 10px; max-width: 140px;">鸿利智汇</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">100亿</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[可比公司公开数据]</td>
+                <td style="padding: 10px; max-width: 140px;">三安光电</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">30x</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[可比公司公开数据]</td>
+                <td style="padding: 10px; max-width: 140px;">三安光电</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">25x</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[可比公司公开数据]</td>
+                <td style="padding: 10px; max-width: 140px;">蔚蓝锂芯</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">2 周</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">未标注</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电尽调</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">4 周</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">未标注</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电尽调</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[待核实]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">6 周</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">未标注</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电尽调</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[未标注]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">8 周</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">未标注</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电尽调</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-size:12px;">[未标注]</span>
+                </td>
+            </tr>
+                    </tbody>
+                </table>
+                
+            </div>
+        </details>
+
+        <details style="margin-bottom: 14px;">
+            <summary style="cursor: pointer; padding: 10px; background: #38b2ac11; border-left: 4px solid #38b2ac; font-weight: 600; border-radius: 6px;">
+                🔢 测算复核 · 19 项
+            </summary>
+            <div style="padding: 10px; overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead>
+                        <tr style="background: #edf2f7; color: #2d3748;">
+                            <th style="padding: 8px; text-align: left;">数据点</th>
+                            <th style="padding: 8px; text-align: left;">声称来源</th>
+                            <th style="padding: 8px; text-align: left;">主体</th>
+                            <th style="padding: 8px; text-align: center;">来源可靠度</th>
+                            <th style="padding: 8px; text-align: left;">评估标签</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">38.5%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">8.49亿</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">2.18元/股</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">10x</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">96,000万元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">25-40亿元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">3.7-5.9</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">0.5-0.8亿</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">31-80x</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">5%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">15%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">0.8 → 2.5亿</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">60-80亿</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">87-150%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">0.8 → 0.3亿</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">18-25亿</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">-22% ~ -44%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">20-50%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">3.5 年</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电尽调项目</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#38b2ac22;color:#38b2ac;font-size:12px;">[需人工复核计算逻辑]</span>
+                </td>
+            </tr>
+                    </tbody>
+                </table>
+                
+            </div>
+        </details>
+
+        <details style="margin-bottom: 14px;">
+            <summary style="cursor: pointer; padding: 10px; background: #4299e111; border-left: 4px solid #4299e1; font-weight: 600; border-radius: 6px;">
+                ✅ 内部一致性 · 90 项
+            </summary>
+            <div style="padding: 10px; overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead>
+                        <tr style="background: #edf2f7; color: #2d3748;">
+                            <th style="padding: 8px; text-align: left;">数据点</th>
+                            <th style="padding: 8px; text-align: left;">声称来源</th>
+                            <th style="padding: 8px; text-align: left;">主体</th>
+                            <th style="padding: 8px; text-align: center;">来源可靠度</th>
+                            <th style="padding: 8px; text-align: left;">评估标签</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">143页</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[MANIFEST元数据:文件页数]</td>
+                <td style="padding: 10px; max-width: 140px;">JNGD晶能光电财务尽调报告终稿.pdf</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#48bb7822;color:#48bb78;font-weight:600;">A</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[元数据自洽]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">4.0MB</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[MANIFEST元数据:文件大小]</td>
+                <td style="padding: 10px; max-width: 140px;">JNGD晶能光电财务尽调报告终稿.pdf</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#48bb7822;color:#48bb78;font-weight:600;">A</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[元数据自洽]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">248页</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[MANIFEST元数据:文件页数]</td>
+                <td style="padding: 10px; max-width: 140px;">关于晶能光电法律尽职调查报告.pdf</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#48bb7822;color:#48bb78;font-weight:600;">A</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[元数据自洽]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">3.4MB</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[MANIFEST元数据:文件大小]</td>
+                <td style="padding: 10px; max-width: 140px;">关于晶能光电法律尽职调查报告.pdf</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#48bb7822;color:#48bb78;font-weight:600;">A</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[元数据自洽]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">59页</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[MANIFEST元数据:文件页数]</td>
+                <td style="padding: 10px; max-width: 140px;">附件一：晶能光电项目报告.pdf</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[元数据自洽]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">5.9MB</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[MANIFEST元数据:文件大小]</td>
+                <td style="padding: 10px; max-width: 140px;">附件一：晶能光电项目报告.pdf</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[元数据自洽]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">79KB</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[MANIFEST元数据:文件大小]</td>
+                <td style="padding: 10px; max-width: 140px;">微信图片_股权结构.png</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[元数据自洽]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">590KB</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[MANIFEST元数据:文件大小]</td>
+                <td style="padding: 10px; max-width: 140px;">微信图片_并购方案.png</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[元数据自洽]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">1.9MB</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">[MANIFEST元数据:文件大小]</td>
+                <td style="padding: 10px; max-width: 140px;">微信图片_对话.jpg</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-weight:600;">B</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[元数据自洽]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">2006 年</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.4-6]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">江西省南昌市</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.4-6]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">38,927.9181万元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.4-6]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">2015 年</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.4-6]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">30%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.4-6]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">50%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.4-6]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">0.2174元/股</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.4-6]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">7,500万元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.4-6]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">363,814,037元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.42]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">23.24%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.42]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">566,707,988元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.42]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">+55.7%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.42]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">42.38%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.42]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">697,576,453元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.42]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">+23.1%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.42]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">38.62%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.42]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">675,772,636元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.42]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">-3.1%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.42]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">36.41%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.42]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">364,941,844元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.资产分析]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">397,861,424元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.资产分析]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">762,803,268元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.资产分析]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">493,191,472元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.资产分析]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">351,121,913元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.资产分析]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">844,313,384元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.资产分析]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">387,939,579元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.资产分析]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">357,975,327元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.资产分析]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">745,914,907元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.资产分析]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">477,918,669元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.资产分析]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">370,758,338元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.资产分析]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">848,677,006元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.资产分析]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">126,426,451元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.现金流]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">236,646,004元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.现金流]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">+87.2%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.现金流]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">303,115,017元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.现金流]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">+28.1%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.现金流]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">180,343,147元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.现金流]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">-40.5%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.现金流]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">2.85</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.现金流]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">2.75</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.现金流]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">1.59</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">2.05</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">2,452.85万元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.14]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">-22.82%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.14]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">9,646.08万元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.14]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">65.43%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.14]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">8,016.36万元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.14]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">41.30%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.14]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">3,695.37万元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.14]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">26.01%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.14]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">7,500万元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.14]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">26%-65%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.14]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">4英寸</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.40-41]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">6/8英寸</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.40-41]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">30/60/90天</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.36]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">110天</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.36]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">50万</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.36]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">0.2174元/股</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.18-25]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">2021-12-25</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.18-25]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">6,000万元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.18-25]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能半导体</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">7,500万元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.18-25]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">20%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.18-25]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">34,500万股</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[01_财务尽调.pdf p.18-25]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">32亿元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[05_并购方案测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">30%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[05_并购方案测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">3亿元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[05_并购方案测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">7,500万元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[05_并购方案测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">25亿元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[05_并购方案测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">32亿元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[05_并购方案测算]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">39-40亿元</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[06_对话]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px; font-weight: 600; max-width: 180px;">68.21%</td>
+                <td style="padding: 10px; color: #4a5568; max-width: 240px;">尽调材料[05_并购方案.png]</td>
+                <td style="padding: 10px; max-width: 140px;">晶能光电股份有限公司</td>
+                <td style="padding: 10px; text-align: center;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#a0aec022;color:#a0aec0;font-weight:600;">?</span>
+                </td>
+                <td style="padding: 10px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#4299e122;color:#4299e1;font-size:12px;">[内部一致性]</span>
+                </td>
+            </tr>
+                    </tbody>
+                </table>
+                <div style='color:#718096; font-size:12px; padding:6px;'>（仅展示前 80 项，共 90 项）</div>
+            </div>
+        </details>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">
+            <span class="step">V3.0</span>
+            核心改进
+        </h2>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 12px;">
+            <thead>
+                <tr style="background: var(--primary); color: white;">
+                    <th style="padding: 12px; text-align: left;">维度</th>
+                    <th style="padding: 12px; text-align: center;">V2.0 (正则/字符串)</th>
+                    <th style="padding: 12px; text-align: center;">V3.0 (LLM Prompt)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 12px;">评估范围</td>
+                    <td style="padding: 12px; text-align: center;">28 个数据点</td>
+                    <td style="padding: 12px; text-align: center;"><b>141 个</b>（×5）</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px;">判断方式</td>
+                    <td style="padding: 12px; text-align: center;">正则表达式 / 字符串包含</td>
+                    <td style="padding: 12px; text-align: center;"><b>LLM Prompt 驱动</b></td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px;">数据源接入</td>
+                    <td style="padding: 12px; text-align: center;">字符串占位</td>
+                    <td style="padding: 12px; text-align: center;"><b>5 源真实接入</b>（iFind / MX / ED / Tushare / AKShare）</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px;">[幻觉] 误报</td>
+                    <td style="padding: 12px; text-align: center;"><b>1 个</b>（"143页"误判）</td>
+                    <td style="padding: 12px; text-align: center;"><b>0 个</b></td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px;">多源比对调用</td>
+                    <td style="padding: 12px; text-align: center;"><b>28 次</b> LLM</td>
+                    <td style="padding: 12px; text-align: center;"><b>32 次</b>（仅对真正需要的数据）+ <b>109 个</b>智能标签</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="footer">
+        V3.0 防幻觉核查 · hv_challenge_b_v3.py · 2026-07-04 · 全 LLM Prompt 驱动
+    </div>
+</div>
+</body>
+</html>
