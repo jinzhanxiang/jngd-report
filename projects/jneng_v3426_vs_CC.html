@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>晶能光电 V3 业务报告 vs Claude Code 原版 · 内容差距分析</title>
+<script>
+(function(){
+  var ua = navigator.userAgent || navigator.vendor || window.opera;
+  var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile Safari/i.test(ua);
+  if (isMobile && !/iPad/.test(ua) && window.innerWidth < 768) {
+    var path = window.location.pathname;
+    var mPath = path.replace(/\.html?$/, '_m.html');
+    if (mPath === path) mPath = path + '_m.html';
+    var test = new Image();
+    test.onerror = function(){};
+    test.onload = function(){ window.location.replace(mPath); };
+    test.src = mPath.split('/').pop();
+    var finalPath = mPath;
+    fetch(finalPath, {method:'HEAD'}).then(function(r){
+      if (r.ok) window.location.replace(finalPath);
+    }).catch(function(){});
+  }
+})();
+</script>
+<script>
+
+// 阅读进度条
+window.addEventListener('scroll', function(){
+  var scrollTop = window.scrollY || document.documentElement.scrollTop;
+  var scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+  var pct = scrollHeight > 0 ? (scrollTop / scrollHeight * 100) : 0;
+  var bar = document.getElementById('progress-bar');
+  if (bar) bar.style.width = pct + '%';
+  var btn = document.getElementById('back-to-top');
+  if (btn) btn.classList.toggle('visible', scrollTop > 400);
+});
+
+document.addEventListener('DOMContentLoaded', function(){
+  var btn = document.getElementById('back-to-top');
+  if (btn) btn.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+
+  var darkBtn = document.getElementById('dark-mode-toggle');
+  if (darkBtn) darkBtn.addEventListener('click', function(){
+    document.body.classList.toggle('dark-mode');
+    var isDark = document.body.classList.contains('dark-mode');
+    darkBtn.textContent = isDark ? '☀️' : '🌙';
+    try { localStorage.setItem('dark-mode', isDark ? '1' : '0'); } catch(e) {}
+  });
+  try {
+    if (localStorage.getItem('dark-mode') === '1') {
+      document.body.classList.add('dark-mode');
+      var b = document.getElementById('dark-mode-toggle');
+      if (b) b.textContent = '☀️';
+    }
+  } catch(e) {}
+
+  /* V3.42.5 P1: 全屏模式切换 */
+  var fsBtn = document.getElementById('fullscreen-toggle');
+  if (fsBtn){
+    fsBtn.addEventListener('click', function(){
+      if (!document.fullscreenElement){
+        document.documentElement.requestFullscreen();
+        fsBtn.textContent = '⛶';
+      } else {
+        document.exitFullscreen();
+        fsBtn.textContent = '⛶';
+      }
+    });
+  }
+  
+  /* V3.42.5 P1: 章节进度指示器 */
+  var sectionIndicator = document.getElementById('section-indicator');
+  var sectionCurrent = document.getElementById('section-current');
+  var sectionTotal = document.getElementById('section-total');
+  if (sectionTotal) sectionTotal.textContent = document.querySelectorAll('h2[id]').length;
+  
+  /* V3.42.5 P1: KPI 数字滚动动画 */
+  var kpiValues = document.querySelectorAll('.kpi-value');
+  function animateKpi(el){
+    var text = el.textContent.trim();
+    var match = text.match(/([\d.]+)/);
+    if (!match) return;
+    var target = parseFloat(match[1]);
+    var prefix = text.split(match[1])[0] || '';
+    var suffix = text.split(match[1])[1] || '';
+    var duration = 1200;
+    var start = 0;
+    var startTime = null;
+    function step(t){
+      if (!startTime) startTime = t;
+      var progress = Math.min((t - startTime) / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      var current = (target * eased).toLocaleString('en-US', {maximumFractionDigits: 2});
+      el.textContent = prefix + current + suffix;
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  if ('IntersectionObserver' in window){
+    var kpiObserver = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if (entry.isIntersecting){
+          animateKpi(entry.target);
+          kpiObserver.unobserve(entry.target);
+        }
+      });
+    }, {threshold: 0.3});
+    kpiValues.forEach(function(el){ kpiObserver.observe(el); });
+  }
+  
+  var headings = document.querySelectorAll('h2[id], h3[id]');
+  var tocLinks = document.querySelectorAll('.toc-sidebar a[href^="#"]');
+  function updateActiveToc(){
+    var scrollY = window.scrollY + 100;
+    var current = '';
+    var idx = 0;
+    for (var i=0;i<headings.length;i++){
+      if (scrollY >= headings[i].offsetTop){ current = headings[i].id; idx = i+1; }
+    }
+    tocLinks.forEach(function(l){
+      l.classList.toggle('active', l.getAttribute('href') === '#' + current);
+    });
+    /* V3.42.5: 更新章节指示器 */
+    if (sectionCurrent) sectionCurrent.textContent = idx;
+    headings.forEach(function(h){
+      if (h.offsetTop <= scrollY) current = '#' + h.id;
+    });
+    tocLinks.forEach(function(a){
+      a.classList.toggle('active', a.getAttribute('href') === current);
+    });
+  }
+  window.addEventListener('scroll', updateActiveToc);
+  updateActiveToc();
+});
+
+
+// === V3.42.6 浮动 TOC 侧边栏 ===
+(function(){
+  if(document.querySelector('#floating-toc')) return;
+  // 收集 H2
+  var h2s = Array.from(document.querySelectorAll('main h2, .md-content h2'));
+  if(h2s.length < 3) return;
+  var toc = document.createElement('div');
+  toc.id = 'floating-toc';
+  toc.innerHTML = '<div class="toc-title">📋 目录 · TOC</div><ul class="toc-list"></ul>';
+  document.body.appendChild(toc);
+  var list = toc.querySelector('.toc-list');
+  h2s.forEach(function(h,idx){
+    var id = 'h2-' + idx;
+    h.id = id;
+    var li = document.createElement('li');
+    li.innerHTML = '<a href="#' + id + '" data-idx="' + idx + '">' + (idx+1) + '. ' + (h.textContent||'').slice(0,28) + '</a>';
+    list.appendChild(li);
+  });
+  var st = document.createElement('style');
+  st.textContent = '#floating-toc{position:fixed;left:24px;top:140px;width:220px;max-height:70vh;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px 16px;overflow-y:auto;z-index:88;box-shadow:var(--shadow-lg);font-size:13px;}#floating-toc .toc-title{font-weight:700;color:var(--accent);font-size:14px;margin-bottom:12px;letter-spacing:0.5px;border-bottom:2px solid var(--accent);padding-bottom:8px;}#floating-toc ul{list-style:none;margin:0;padding:0;}#floating-toc li{margin:7px 0;}#floating-toc a{color:var(--text-secondary);text-decoration:none;display:block;padding:6px 10px;border-radius:6px;transition:var(--transition);border-left:3px solid transparent;}#floating-toc a:hover{background:var(--bg-accent);color:var(--primary);border-left-color:var(--accent);transform:translateX(4px);}#floating-toc a.active{background:var(--bg-accent);color:var(--accent);border-left-color:var(--accent);font-weight:600;}@media (max-width:1500px){#floating-toc{display:none;}}body.dark-mode #floating-toc{background:rgba(26,32,44,0.95);}body.dark-mode #floating-toc a{color:#a0aec0;}body.dark-mode #floating-toc a:hover,body.dark-mode #floating-toc a.active{background:rgba(45,55,72,0.6);color:#f6ad55;}';
+  document.head.appendChild(st);
+  // 滚动监听高亮当前章节
+  var lastActive = null;
+  window.addEventListener('scroll',function(){
+    var y = window.scrollY + 200;
+    var activeIdx = 0;
+    h2s.forEach(function(h,i){if(h.offsetTop<=y) activeIdx=i;});
+    if(lastActive!==activeIdx){
+      lastActive = activeIdx;
+      list.querySelectorAll('a').forEach(function(a){a.classList.remove('active');});
+      var cur = list.querySelector('a[data-idx="'+activeIdx+'"]');
+      if(cur) cur.classList.add('active');
+    }
+  });
+})();
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#1a202c;background:#fafaf9;line-height:1.9;font-size:19px;max-width:1200px;margin:0 auto;padding:24px}
+h1{font-size:30px;color:#1a365d;margin:28px 0 16px;border-bottom:3px solid #d69e2e;padding-bottom:12px;font-weight:700}
+h2{font-size:24px;color:#1a365d;margin:30px 0 14px;font-weight:700}
+h3{font-size:20px;color:#2d3748;margin:22px 0 10px;font-weight:600}
+h4{font-size:18px;color:#2d3748;margin:18px 0 8px;font-weight:600}
+p{margin-bottom:14px;font-size:18px;letter-spacing:0.2px}
+strong{color:#1a365d}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:16px;table-layout:fixed;word-break:keep-all}
+th{background:linear-gradient(135deg,#1a365d,#2c5282);color:#fff;padding:11px 14px;text-align:left;font-size:15px;font-weight:600;word-break:keep-all;white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid #e2e8f0;font-size:15px;word-break:keep-all;vertical-align:middle}
+table td:first-child, table th:first-child{white-space:nowrap;font-weight:600;min-width:120px}
+table td:nth-child(n){overflow-wrap:break-word}
+tr:hover td{background:#fef5e7}
+table.card-table{background:#fafaf9;border-radius:10px;overflow:hidden}
+blockquote{background:linear-gradient(135deg,#fffbeb,#fef3c7);border-left:4px solid #d69e2e;padding:14px 18px;margin:18px 0;border-radius:0 8px 8px 0;color:#744210;font-size:17px}
+.nav{background:linear-gradient(135deg,#1a365d,#2c5282);padding:14px 20px;margin:-24px -24px 28px;border-radius:0 0 12px 12px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+.nav a{color:rgba(255,255,255,0.85);text-decoration:none;font-size:14px;margin-right:14px;padding:4px 10px;border-radius:6px;transition:all 0.2s}
+.nav a:hover{color:#fff;background:rgba(255,255,255,0.15);text-decoration:none}
+ul,ol{margin:14px 0 14px 28px}
+li{margin-bottom:8px;font-size:18px}
+code{background:#f7fafc;padding:3px 8px;border-radius:4px;font-size:15px;color:#c53030}
+pre{background:#1a202c;color:#e2e8f0;padding:18px;border-radius:8px;margin:18px 0;overflow-x:auto}
+pre code{background:none;color:inherit;font-size:15px}
+a{color:#3182ce;text-decoration:none}
+a:hover{color:#1a365d;text-decoration:underline}
+hr{border:none;border-top:1px solid #e2e8f0;margin:32px 0}
+/* ===== V3.42.3 增强 1: 阅读进度条 ===== */
+#progress-bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#d69e2e,#1a365d);z-index:9999;transition:width 0.1s ease-out}
+
+/* ===== V3.42.3 增强 2: 浮动 TOC 侧边栏 ===== */
+.toc-sidebar{position:fixed;left:20px;top:120px;width:220px;max-height:70vh;overflow-y:auto;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px;font-size:13px;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.04)}
+.toc-sidebar h4{font-size:14px;color:#1a365d;margin:0 0 10px;padding-bottom:8px;border-bottom:2px solid #d69e2e;font-weight:700}
+.toc-sidebar ul{list-style:none;margin:0;padding:0}
+.toc-sidebar li{margin:4px 0;font-size:13px}
+.toc-sidebar li.lv-2{padding-left:0}
+.toc-sidebar li.lv-3{padding-left:12px}
+.toc-sidebar a{color:#4a5568;text-decoration:none;display:block;padding:4px 6px;border-radius:4px;transition:all 0.15s}
+.toc-sidebar a:hover{color:#1a365d;background:#fef5e7}
+.toc-sidebar a.active{color:#1a365d;background:#fef5e7;font-weight:600;border-left:2px solid #d69e2e;padding-left:4px}
+
+/* ===== V3.42.3 增强 3: 浮动"关键结论"卡片 ===== */
+.key-conclusion{position:fixed;right:20px;top:120px;width:240px;max-height:70vh;overflow-y:auto;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:2px solid #d69e2e;border-radius:10px;padding:14px;font-size:13px;z-index:100;box-shadow:0 4px 12px rgba(214,158,46,0.15)}
+.key-conclusion h4{font-size:14px;color:#744210;margin:0 0 10px;padding-bottom:8px;border-bottom:2px solid #d69e2e;font-weight:700}
+.key-conclusion ul{list-style:none;margin:0;padding:0}
+.key-conclusion li{margin:6px 0;font-size:13px;color:#744210;padding:4px 0;border-bottom:1px dashed #d69e2e}
+.key-conclusion li:last-child{border-bottom:none}
+
+/* ===== V3.42.3 增强 4: 回到顶部按钮 ===== */
+#back-to-top{position:fixed;right:24px;bottom:24px;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#1a365d,#2c5282);color:#fff;border:none;font-size:22px;cursor:pointer;display:none;z-index:99;box-shadow:0 4px 12px rgba(26,54,93,0.3);transition:all 0.2s}
+#back-to-top:hover{transform:translateY(-3px);box-shadow:0 6px 16px rgba(26,54,93,0.4)}
+#back-to-top.visible{display:flex;align-items:center;justify-content:center}
+
+/* ===== V3.42.3 增强 5: H2 之间翻页导航 ===== */
+.h-nav{display:flex;justify-content:space-between;margin:24px 0;padding:14px 0;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;font-size:14px}
+.h-nav a{flex:1;padding:8px 14px;border-radius:6px;transition:all 0.2s;text-decoration:none}
+.h-nav a.prev{color:#4a5568;text-align:left}
+.h-nav a.next{color:#4a5568;text-align:right}
+.h-nav a:hover{background:#fef5e7;color:#1a365d}
+.h-nav a.disabled{color:#cbd5e0;pointer-events:none}
+.h-nav .label{display:block;font-size:11px;color:#a0aec0;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.5px}
+
+/* ===== V3.42.3 增强 6: 表格斑马纹 ===== */
+tbody tr:nth-child(even) td{background:#fafaf9}
+tbody tr:nth-child(even):hover td{background:#fef5e7}
+table caption{caption-side:top;text-align:left;font-size:14px;color:#1a365d;font-weight:600;padding:8px 0;letter-spacing:0.3px}
+
+/* ===== V3.42.3 增强 7: 报告封面 hero ===== */
+.hero{background:linear-gradient(135deg,#1a365d 0%,#2c5282 60%,#d69e2e 100%);color:#fff;padding:48px 36px;margin:-24px -24px 32px;border-radius:0 0 16px 16px;box-shadow:0 4px 16px rgba(0,0,0,0.08);position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50%;right:-10%;width:300px;height:300px;background:rgba(255,255,255,0.05);border-radius:50%}
+.hero::after{content:'';position:absolute;bottom:-30%;left:-5%;width:200px;height:200px;background:rgba(255,255,255,0.03);border-radius:50%}
+.hero-content{position:relative;z-index:1}
+.hero h1{border:none;color:#fff;margin:0 0 12px;font-size:36px;text-shadow:0 2px 8px rgba(0,0,0,0.15)}
+.hero .meta{display:flex;gap:24px;flex-wrap:wrap;margin-top:16px;font-size:14px;color:rgba(255,255,255,0.85)}
+.hero .meta-item{display:flex;align-items:center;gap:6px}
+.hero .meta-label{opacity:0.7;font-size:12px;text-transform:uppercase;letter-spacing:0.5px}
+.hero .meta-value{font-weight:600}
+
+/* ===== V3.42.3 增强 8: 字体 letter-spacing ===== */
+h1, h2, h3, h4{letter-spacing:0.5px}
+
+/* ===== V3.42.3 增强 9: 深色模式 ===== */
+body.dark-mode{background:#1a202c;color:#e2e8f0}
+body.dark-mode .hero{box-shadow:0 4px 16px rgba(0,0,0,0.3)}
+body.dark-mode .toc-sidebar, body.dark-mode .key-conclusion{background:#2d3748;border-color:#4a5568;color:#e2e8f0}
+body.dark-mode .toc-sidebar a{color:#cbd5e0}
+body.dark-mode .toc-sidebar a.active, body.dark-mode .toc-sidebar a:hover{background:#4a5568;color:#fff}
+body.dark-mode table{background:#2d3748}
+body.dark-mode th{background:linear-gradient(135deg,#2c5282,#1a365d)}
+body.dark-mode td{border-bottom-color:#4a5568;color:#e2e8f0}
+body.dark-mode tbody tr:nth-child(even) td{background:#2d3748}
+body.dark-mode tr:hover td, body.dark-mode tbody tr:nth-child(even):hover td{background:#4a5568}
+body.dark-mode blockquote{background:linear-gradient(135deg,#2d3748,#1a202c);color:#d69e2e}
+body.dark-mode code{background:#2d3748;color:#fc8181}
+body.dark-mode .h-nav a{color:#cbd5e0}
+body.dark-mode .h-nav a:hover{background:#4a5568;color:#fff}
+#dark-mode-toggle{position:fixed;right:24px;bottom:84px;width:48px;height:48px;border-radius:50%;background:#fff;color:#1a365d;border:1px solid #d0d7de;font-size:20px;cursor:pointer;z-index:99;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.2s}
+#dark-mode-toggle:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.12)}
+body.dark-mode #dark-mode-toggle{background:#2d3748;color:#d69e2e;border-color:#4a5568}
+
+/* ===== V3.42.3 增强 10: 打印样式 ===== */
+@media print{
+  /* V3.42.5 P0 #3: @page 纸张规则 */
+  @page{size:A4 portrait;margin:18mm 14mm 20mm 14mm}
+  @page :first{margin-top:0}
+  
+  body{background:#fff;max-width:100%;padding:0;font-size:11pt;line-height:1.6;color:#000}
+  .hero{background:#1a365d !important;color:#fff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:24px;break-after:page}
+  .hero h1{color:#fff !important;font-size:24pt}
+  .hero p{color:#e2e8f0 !important}
+  
+  .nav, .toc-sidebar, .key-conclusion, #back-to-top, #dark-mode-toggle, #progress-bar{display:none !important}
+  .h-nav{display:none}
+  
+  /* V3.42.5: 避免孤行/寡行 */
+  h1{break-before:page;break-after:avoid;font-size:18pt}
+  h2{break-before:auto;break-after:avoid;font-size:14pt;color:#1a365d}
+  h3, h4{break-after:avoid;font-size:12pt}
+  p{orphans:3;widows:3}
+  
+  /* V3.42.5: 表格/卡片不被切断 */
+  table, blockquote, .callout, .data-card, .stat-card, .timeline{break-inside:avoid;box-shadow:none !important;border:1px solid #e2e8f0}
+  img{break-inside:avoid;max-width:100%}
+  pre{break-inside:avoid;white-space:pre-wrap;background:#f7fafc !important;color:#000;border:1px solid #ccc;font-size:9pt}
+  code{background:#f7fafc;color:#c7254e}
+  
+  /* V3.42.5: 链接展示 URL */
+  a{color:#000;text-decoration:underline}
+  a[href^="http"]:after{content:" (" attr(href) ")";font-size:9pt;color:#666}
+  
+  /* V3.42.5: 关键结论保留 */
+  .key-conclusion{background:#fef5e7 !important;border-left:4px solid #d69e2e;color:#000 !important;break-inside:avoid}
+}
+/* ===== V3.42.4 学术研究类设计模式 ===== */
+
+/* === CSS 变量体系（来自 eliahuhorwitz）=== */
+:root{
+  --primary: #1a365d;
+  --primary-hover: #2c5282;
+  --secondary: #4a5568;
+  --accent: #d69e2e;
+  --accent-hover: #b7791f;
+  --text-primary: #1a202c;
+  --text-secondary: #4a5568;
+  --text-light: #718096;
+  --bg-primary: #fafaf9;
+  --bg-card: #ffffff;
+  --bg-accent: #f7fafc;
+  --border: #e2e8f0;
+  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.10), 0 8px 10px -6px rgba(0,0,0,0.04);
+  --gradient-primary: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
+  --gradient-accent: linear-gradient(135deg, #d69e2e 0%, #b7791f 100%);
+  --gradient-subtle: linear-gradient(135deg, #fef5e7 0%, #fffbeb 100%);
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --radius: 12px;
+  --radius-lg: 16px;
+  
+  /* V3.42.5 P2 新增: 数据渐变（科技风专用）*/
+  --gradient-positive: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  --gradient-negative: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+  --gradient-warning: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+  --gradient-info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  --gradient-hud: linear-gradient(135deg, #00d4ff 0%, #0066ff 50%, #00aaff 100%);
+  --gradient-aurora: linear-gradient(135deg, #00ff87 0%, #60efff 50%, #a78bfa 100%);
+}
+
+/* ===== V3.42.5 P1 演讲优化: KPI 数字大字号冲击 + 滚动动画 ===== */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin:24px 0}
+.kpi-card{
+  background: var(--bg-card);
+  border:1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding:24px;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+  box-shadow: var(--shadow-md);
+  transition: var(--transition);
+}
+.kpi-card:hover{transform:translateY(-4px);box-shadow: var(--shadow-lg);}
+.kpi-card:before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background: var(--gradient-primary);
+  transform:scaleX(0);transform-origin:left;transition:transform 0.4s ease;
+}
+.kpi-card:hover:before{transform:scaleX(1);}
+.kpi-value{
+  font-size:42px;
+  font-weight:700;
+  background: var(--gradient-hud);
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  color:transparent;
+  line-height:1.1;
+  margin-bottom:8px;
+  letter-spacing:-0.02em;
+  font-feature-settings:"tnum";
+}
+/* V3.42.6 KPI 业务语义分色: 4 类指标不同视觉 */
+.kpi-card.kpi-revenue{
+  border-left:4px solid #4facfe !important;
+  padding-left:20px;
+  background: linear-gradient(90deg, rgba(79,172,254,0.08), transparent 40%) !important;
+}
+.kpi-card.kpi-profit{
+  border-left:4px solid #38ef7d !important;
+  padding-left:20px;
+  background: linear-gradient(90deg, rgba(56,239,125,0.08), transparent 40%) !important;
+}
+.kpi-card.kpi-market-share{
+  border-left:4px solid #d69e2e !important;
+  padding-left:20px;
+  background: linear-gradient(90deg, rgba(247,151,30,0.08), transparent 40%) !important;
+}
+.kpi-card.kpi-valuation{
+  border-left:4px solid #f45c43 !important;
+  padding-left:20px;
+  background: linear-gradient(90deg, rgba(245,92,67,0.08), transparent 40%) !important;
+}
+.kpi-card.kpi-revenue .kpi-value{background:linear-gradient(135deg,#4facfe 0%,#00f2fe 100%) !important;-webkit-background-clip:text !important;background-clip:text !important;-webkit-text-fill-color:transparent !important;color:transparent !important;}
+.kpi-card.kpi-profit .kpi-value{background:linear-gradient(135deg,#11998e 0%,#38ef7d 100%) !important;-webkit-background-clip:text !important;background-clip:text !important;-webkit-text-fill-color:transparent !important;color:transparent !important;}
+.kpi-card.kpi-market-share .kpi-value{background:linear-gradient(135deg,#f7971e 0%,#ffd200 100%) !important;-webkit-background-clip:text !important;background-clip:text !important;-webkit-text-fill-color:transparent !important;color:transparent !important;}
+.kpi-card.kpi-valuation .kpi-value{background:linear-gradient(135deg,#eb3349 0%,#f45c43 100%) !important;-webkit-background-clip:text !important;background-clip:text !important;-webkit-text-fill-color:transparent !important;color:transparent !important;}
+/* V3.42.6 关键修复: 修正第547行旧 .kpi-value{} 默认 color 干扰 */
+.kpi-card .kpi-value{color:transparent !important;-webkit-text-fill-color:transparent !important;}
+/* dark mode 加亮 */
+body.dark-mode .kpi-card.kpi-revenue .kpi-value{filter:brightness(1.2);}
+body.dark-mode .kpi-card.kpi-profit .kpi-value{filter:brightness(1.2);}
+body.dark-mode .kpi-card.kpi-market-share .kpi-value{filter:brightness(1.15);}
+body.dark-mode .kpi-card.kpi-valuation .kpi-value{filter:brightness(1.2);}
+body.dark-mode .kpi-card.kpi-revenue{border-left-color:#7dd3fc !important;}
+body.dark-mode .kpi-card.kpi-profit{border-left-color:#86efac !important;}
+body.dark-mode .kpi-card.kpi-market-share{border-left-color:#fcd34d !important;}
+body.dark-mode .kpi-card.kpi-valuation{border-left-color:#fca5a5 !important;}
+/* V3.42.5 颜色修复: dark mode 下 KPI 改用更亮的渐变避免被压暗 */
+body.dark-mode .kpi-value{
+  background: var(--gradient-aurora) !important;
+  -webkit-background-clip:text !important;
+  background-clip:text !important;
+  -webkit-text-fill-color:transparent !important;
+  color:transparent !important;
+  filter:brightness(1.15);
+}
+.kpi-label{font-size:13px;color: var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;font-weight:600;}
+.kpi-trend{font-size:12px;margin-top:6px;font-weight:500;}
+.kpi-trend.up{color:#38a169;}
+.kpi-trend.down{color:#e53e3e;}
+body.dark-mode .kpi-trend.up{color: #68d391 !important;}
+body.dark-mode .kpi-trend.down{color: #fc8181 !important;}
+/* V3.42.5 颜色修复: timeline-item 强数字加亮 */
+body.dark-mode .timeline-item strong{color: var(--accent) !important;font-weight:700;}
+.timeline-item strong{color: var(--primary);}
+.timeline strong{color: #b7791f;}
+/* V3.42.6 Timeline 圆点差异化: nth-child 交替色 + milestone 放大 */
+.timeline-item.tl-odd::before, .timeline-item.tl-odd.tl-odd::before{content:'●' !important;font-size:32px !important;color:#4fd1c5 !important;text-shadow:0 0 8px rgba(79,209,197,0.7),0 0 16px rgba(79,209,197,0.5) !important;}
+.timeline-item.tl-even::before, .timeline-item.tl-even.tl-even::before{content:'◆' !important;font-size:24px !important;color:#d69e2e !important;text-shadow:0 0 8px rgba(214,158,46,0.7),0 0 16px rgba(214,158,46,0.5) !important;}
+.timeline-item.tl-first::before, .timeline-item.tl-first.tl-first::before{color:#319795 !important;font-size:36px !important;text-shadow:0 0 10px rgba(49,151,149,0.9),0 0 18px rgba(49,151,149,0.7) !important;}
+.timeline-item.tl-last::before, .timeline-item.tl-last.tl-last::before{content:'★' !important;font-size:34px !important;color:#ffd200 !important;text-shadow:0 0 10px rgba(255,210,0,0.9),0 0 20px rgba(255,210,0,0.7) !important;}
+/* 关键里程碑：金色脉冲徽章 */
+.timeline-item.tl-milestone{padding-left:80px !important;padding-top:18px;}
+.timeline-item.tl-milestone::before, .timeline-item.tl-milestone.tl-milestone::before{content:'★' !important;color:#ffd200 !important;font-size:36px !important;text-shadow:0 0 12px rgba(255,210,0,0.9),0 0 22px rgba(255,210,0,0.7) !important;animation:milestonePulse 2s ease-in-out infinite;}
+.timeline-item.tl-milestone::after{content:"⭐ 里程碑";position:absolute;left:14px;top:-10px;font-size:11px;padding:3px 8px;background:linear-gradient(135deg,#ffd200,#eb3349);color:#1a365d;border-radius:10px;font-weight:700;letter-spacing:0.5px;z-index:10;box-shadow:0 3px 12px rgba(255,210,0,0.5);}
+@keyframes milestonePulse{
+  0%,100%{box-shadow:0 0 0 5px rgba(255,210,0,0.4),0 0 22px rgba(255,210,0,0.8);}
+  50%{box-shadow:0 0 0 8px rgba(255,210,0,0.2),0 0 30px rgba(255,210,0,1);}
+}
+
+/* ===== V3.42.5 P2 科技风: HUD 风格元素 ===== */
+.hud-element{
+  background: var(--bg-card);
+  border:1px solid var(--primary);
+  border-radius:4px;
+  padding:16px;
+  position:relative;
+  font-family: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Monaco, 'Cascadia Code', monospace;
+}
+.hud-element:before, .hud-element:after{
+  content:'';position:absolute;width:12px;height:12px;border:2px solid var(--accent);
+}
+.hud-element:before{top:-2px;left:-2px;border-right:none;border-bottom:none;}
+.hud-element:after{bottom:-2px;right:-2px;border-left:none;border-top:none;}
+.hud-title{font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:0.15em;margin-bottom:8px;}
+.hud-value{font-size:24px;color:var(--primary);font-weight:700;font-variant-numeric:tabular-nums;}
+body.dark-mode .hud-title{color: #4fd1c5 !important;}
+body.dark-mode .hud-value{color: #76e4f7 !important;}
+
+/* ===== V3.42.5 P2 科技风: 数据点 pulse 动效 ===== */
+@keyframes dataPulse{
+  0%, 100%{opacity:1;transform:scale(1);}
+  50%{opacity:0.7;transform:scale(1.05);}
+}
+.pulse{animation:dataPulse 2s ease-in-out infinite;}
+.pulse-fast{animation:dataPulse 1s ease-in-out infinite;}
+
+/* ===== V3.42.5 P2 科技风: 玻璃拟态卡片 ===== */
+.glass-card{
+  background:rgba(255,255,255,0.7);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,0.3);
+  border-radius: var(--radius-lg);
+  padding:24px;
+  box-shadow:0 8px 32px rgba(31,38,135,0.15);
+}
+body.dark-mode .glass-card{
+  background:rgba(15,20,25,0.7);
+  border:1px solid rgba(99,179,237,0.2);
+}
+
+/* ===== V3.42.5 P2 科技风: 代码块（深色+行号+语法感） ===== */
+.tech-code{
+  background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+  color:#e6edf3;
+  border:1px solid #30363d;
+  border-radius: var(--radius);
+  padding:20px;
+  font-family: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Monaco, 'Cascadia Code', monospace;
+  font-size:13px;
+  line-height:1.6;
+  overflow-x:auto;
+  position:relative;
+  box-shadow: var(--shadow-lg);
+}
+.tech-code:before{
+  content:'● ● ●';position:absolute;top:8px;left:16px;
+  color:#ff5f56;font-size:10px;letter-spacing:4px;
+}
+.tech-code .comment{color:#8b949e;font-style:italic;}
+.tech-code .keyword{color:#ff9d4d;font-weight:700;}
+.tech-code .string{color:#a5d6ff;}
+.tech-code .number{color:#79c0ff;font-weight:600;}
+.tech-code .function{color:#d2a8ff;font-weight:600;}
+body.dark-mode .tech-code .comment{color:#a5b1c2;}
+body.dark-mode .tech-code .keyword{color:#FF9D4D;font-weight:700;}
+body.dark-mode .tech-code .function{color:#B5A8FF;}
+body.dark-mode .tech-code .number{color:#FFD66B;font-weight:600;}
+
+/* ===== V3.42.5 P1 演讲优化: 全屏按钮 ===== */
+#fullscreen-toggle{
+  position:fixed;right:24px;bottom:140px;width:48px;height:48px;border-radius:50%;
+  background:#fff;color:#1a365d;border:1px solid #d0d7de;font-size:20px;cursor:pointer;z-index:99;
+  box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.2s;
+}
+#fullscreen-toggle:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.12);}
+body.dark-mode #fullscreen-toggle{background:#2d3748;color:#d69e2e;border-color:#4a5568;}
+@media print{#fullscreen-toggle{display:none !important}}
+
+/* ===== V3.42.5 P1 演讲优化: 章节进度指示器 ===== */
+#section-indicator{
+  position:fixed;top:80px;right:24px;
+  background: var(--bg-card);
+  border:1px solid var(--border);
+  border-radius: var(--radius);
+  padding:8px 16px;
+  font-size:12px;
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-sm);
+  z-index:50;
+  transition: var(--transition);
+}
+#section-indicator .section-count{color: var(--primary);font-weight:600;}
+
+/* ===== V3.42.5 P3 体验优化: 表格列悬停 ===== */
+table tbody tr{transition: background 0.2s;}
+table tbody tr:hover{background: rgba(26,54,93,0.04);}
+body.dark-mode table tbody tr:hover{background: rgba(99,179,237,0.08);}
+
+/* ===== V3.42.5 P3 体验优化: 链接 hover 提示 ===== */
+a[data-tooltip]{position:relative;}
+a[data-tooltip]:hover:after{
+  content:attr(data-tooltip);position:absolute;bottom:100%;left:50%;
+  transform:translateX(-50%);background:#1a202c;color:#fff;padding:6px 12px;border-radius:4px;
+  font-size:12px;white-space:nowrap;margin-bottom:6px;z-index:100;box-shadow: var(--shadow-lg);
+}
+
+/* ===== V3.42.5 P0 #1 修复: 系统级暗色偏好 ===== */
+@media (prefers-color-scheme: dark){
+  body:not(.light-mode){
+    --bg-primary: #0f1419;
+    --bg-card: #1a202c;
+    --bg-accent: #2d3748;
+    --text-primary: #e2e8f0;
+    --text-secondary: #a0aec0;
+    --text-light: #718096;
+    --border: #2d3748;
+    --primary: #63b3ed;
+    --accent: #f6ad55;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.5);
+    --shadow-lg: 0 10px 15px rgba(0,0,0,0.6);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+  }
+  body:not(.light-mode) .hero{background: linear-gradient(135deg, #1a202c 0%, #2d3748 50%, #1a365d 100%) !important;}
+}
+
+/* ===== V3.42.5 P0 #2 修复: 手动切换暗色（高优先级）===== */
+body.dark-mode{
+  --bg-primary: #0f1419 !important;
+  --bg-card: #1a202c !important;
+  --bg-accent: #2d3748 !important;
+  --text-primary: #e2e8f0 !important;
+  --text-secondary: #a0aec0 !important;
+  --text-light: #718096 !important;
+  --border: #2d3748 !important;
+  --primary: #63b3ed !important;
+  --accent: #f6ad55 !important;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4) !important;
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.5) !important;
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.6) !important;
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+body.dark-mode .hero{background: linear-gradient(135deg, #1a202c 0%, #2d3748 50%, #1a365d 100%) !important;}
+body.dark-mode .data-card, body.dark-mode .stat-card, body.dark-mode .callout{background: var(--bg-card) !important;color: var(--text-primary) !important;border-color: var(--border) !important;}
+body.dark-mode .callout strong{color: var(--accent) !important;}
+body.dark-mode strong{color: var(--accent) !important;font-weight:700;}
+/* V3.42.5 颜色修复: 关键战略数字特殊加亮 */
+.amount-highlight{color: #b7791f;font-weight:700;font-size:1.1em;padding:2px 8px;background:linear-gradient(135deg,#fffbeb,#fef5e7);border-radius:4px;display:inline-block;}
+body.dark-mode .amount-highlight{color: #fbd38d !important;background:rgba(251,211,141,0.12);font-weight:700;}
+
+body.dark-mode .hero strong{color:#fbd38d !important;}
+body.dark-mode h1, body.dark-mode h2, body.dark-mode h3, body.dark-mode h4{color: var(--text-primary) !important;}
+body.dark-mode a{color: var(--primary) !important;}
+body.dark-mode table{background: var(--bg-card) !important;color: var(--text-primary) !important;}
+body.dark-mode tbody tr:nth-child(even) td{background: rgba(255,255,255,0.03) !important;}
+body.dark-mode tbody tr:nth-child(even):hover td{background: var(--bg-accent) !important;}
+body.dark-mode th{background: var(--bg-accent) !important;color: var(--text-primary) !important;}
+body.dark-mode td{border-color: var(--border) !important;}
+body.dark-mode blockquote{background: var(--bg-accent) !important;border-left-color: var(--accent) !important;}
+body.dark-mode pre{background: #0d1117 !important;color: #e6edf3 !important;}
+body.dark-mode code{background: #161b22 !important;color: #f6ad55 !important;}
+body.dark-mode .key-conclusion{background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%) !important;border-left-color: var(--accent) !important;color: var(--text-primary) !important;}
+body.dark-mode .timeline-item{background: var(--bg-card) !important;color: var(--text-primary) !important;}
+body.dark-mode .timeline-item:before{border-color: #63b3ed !important;background: var(--bg-accent) !important;box-shadow:0 0 0 3px rgba(99,179,237,0.2) !important;}
+body.dark-mode .timeline-item:nth-child(1):before{background: #4fd1c5 !important;border-color: #4fd1c5 !important;}
+body.dark-mode .timeline-item:nth-child(2):before{background: #d69e2e !important;border-color: #d69e2e !important;}
+body.dark-mode .timeline-item:nth-child(3):before{background: #4fd1c5 !important;border-color: #4fd1c5 !important;}
+body.dark-mode .timeline-item:nth-child(4):before{background: #d69e2e !important;border-color: #d69e2e !important;}
+body.dark-mode .timeline-item:nth-child(5):before{background: #4fd1c5 !important;border-color: #4fd1c5 !important;}
+body.dark-mode .toc-sidebar{background: var(--bg-card) !important;border-color: var(--border) !important;}
+body.dark-mode .toc-sidebar a{color: var(--text-secondary) !important;}
+body.dark-mode .toc-sidebar a.active, body.dark-mode .toc-sidebar a:hover{background: var(--bg-accent) !important;color: var(--accent) !important;}
+body.dark-mode .chip{background: rgba(99,179,237,0.15) !important;color: var(--text-primary) !important;border-color: rgba(99,179,237,0.4) !important;}
+body.dark-mode .chip.chip-success{background: rgba(56,239,125,0.15) !important;color: #6ee7a3 !important;border-color: rgba(56,239,125,0.4) !important;}
+body.dark-mode .chip.chip-warning{background: rgba(246,173,85,0.15) !important;color: #fbd38d !important;border-color: rgba(246,173,85,0.4) !important;}
+body.dark-mode .chip.chip-danger{background: rgba(245,101,101,0.15) !important;color: #fc8181 !important;border-color: rgba(245,101,101,0.4) !important;}
+body.dark-mode .chip.chip-info{background: rgba(99,179,237,0.15) !important;color: #90cdf4 !important;border-color: rgba(99,179,237,0.4) !important;}
+body.dark-mode .chip.chip-venue{background: rgba(160,174,192,0.15) !important;color: var(--text-secondary) !important;border-color: rgba(160,174,192,0.3) !important;}
+
+/* === 1. Chip 徽章（来自 publication-venue）=== */
+.chip{display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:var(--radius);font-size:13px;font-weight:600;background:var(--bg-accent);color:var(--text-secondary);margin:0 6px 6px 0;transition:var(--transition);border:1px solid var(--border)}
+.chip:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
+.chip.chip-venue{color:var(--text-secondary);background:var(--bg-accent);font-weight:600}
+.chip.chip-date{color:var(--primary);background:linear-gradient(135deg,#fffbeb,#fef5e7);border-color:var(--accent)}
+.chip.chip-category{color:#fff;background:var(--gradient-primary);border:none}
+.chip.chip-success{color:#22543d;background:#dafbe1;border-color:#1a7f37}
+.chip.chip-warning{color:#744210;background:#fff8c5;border-color:#9a6700}
+.chip.chip-danger{color:#742a2a;background:#ffebe9;border-color:#cf222e}
+.chip.chip-info{color:#2c5282;background:#bee3f8;border-color:#3182ce}
+
+/* === 2. 链接下划线动画（来自 publication-authors）=== */
+.link-animated{position:relative;text-decoration:none;color:var(--primary);font-weight:500;transition:color 0.2s}
+.link-animated::after{content:'';position:absolute;width:0;height:2px;bottom:-2px;left:0;background:var(--accent);transition:width 0.3s cubic-bezier(0.4,0,0.2,1)}
+.link-animated:hover{color:var(--primary-hover);text-decoration:none}
+.link-animated:hover::after{width:100%}
+
+/* === 3. 图片/卡片 hover 微动效 === */
+img{border-radius:var(--radius);transition:var(--transition)}
+img:hover{box-shadow:var(--shadow-lg)}
+p > img, td > img{margin:8px 0;max-width:100%}
+
+/* === 4. Stat 统计数字块（核心可视化元素）=== */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;margin:24px 0}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:var(--transition);position:relative;overflow:hidden}
+.stat-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:var(--accent)}
+.stat-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:var(--gradient-primary)}
+.stat-card.accent::before{background:var(--gradient-accent)}
+.stat-label{font-size:12px;color:var(--text-light);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;font-weight:600}
+.stat-value{font-size:32px;font-weight:800;color:var(--primary);line-height:1.1;margin-bottom:6px;letter-spacing:-0.5px}
+.stat-card.accent .stat-value{color:var(--accent)}
+.stat-trend{font-size:13px;color:var(--text-secondary);margin-top:4px}
+.stat-trend.up{color:#1a7f37}
+.stat-trend.down{color:#cf222e}
+
+/* === 5. Data-Card 数据卡（行级数据展示）=== */
+.data-card{background:var(--bg-card);border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:var(--radius);padding:16px 20px;margin:14px 0;transition:var(--transition)}
+.data-card:hover{box-shadow:var(--shadow-md);border-left-color:var(--accent)}
+.data-card.accent{border-left-color:var(--accent)}
+.data-card.success{border-left-color:#1a7f37;background:linear-gradient(135deg,#fff,#f0fff4)}
+.data-card.warning{border-left-color:#9a6700;background:linear-gradient(135deg,#fff,#fffff0)}
+.data-card.danger{border-left-color:#cf222e;background:linear-gradient(135deg,#fff,#fff5f5)}
+.data-card-title{font-size:16px;font-weight:700;color:var(--primary);margin-bottom:6px}
+.data-card.accent .data-card-title{color:var(--accent)}
+.data-card-body{font-size:15px;color:var(--text-secondary);line-height:1.7}
+.data-card-body strong{color:var(--primary)}
+
+/* === 6. Timeline 时间线（项目里程碑）=== */
+.timeline{position:relative;margin:24px 0;padding-left:32px}
+.timeline::before{content:'';position:absolute;left:8px;top:8px;bottom:8px;width:2px;background:linear-gradient(180deg,var(--primary),var(--accent))}
+.timeline-item{position:relative;margin-bottom:20px;padding:12px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);transition:var(--transition)}
+.timeline-item:hover{box-shadow:var(--shadow-md);transform:translateX(4px)}
+.timeline-item{position:relative;padding-left:54px !important;min-height:36px;}
+.timeline-item::before{position:absolute !important;left:14px !important;top:6px !important;font-family:Inter,system-ui,sans-serif !important;line-height:1 !important;background:transparent !important;border:0 !important;width:auto !important;height:auto !important;border-radius:0 !important;box-shadow:none !important;text-align:center;}
+.timeline-item.accent::before{border-color:var(--accent)}
+.timeline-date{font-size:12px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+.timeline-title{font-size:16px;font-weight:700;color:var(--primary);margin-bottom:4px}
+.timeline-body{font-size:14px;color:var(--text-secondary);line-height:1.6}
+
+/* === 7. KPI 大数字块（报告封面用）=== */
+.kpi-row{display:flex;flex-wrap:wrap;gap:14px;margin:20px 0}
+.kpi{flex:1;min-width:140px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;text-align:center;transition:var(--transition)}
+.kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.kpi-value{display:block;font-size:24px;font-weight:800;color:var(--primary);line-height:1.2;letter-spacing:-0.3px}
+.kpi-label{display:block;font-size:12px;color:var(--text-light);margin-top:4px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600}
+
+/* === 8. 渐变文字（强调用）=== */
+.text-gradient{background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:700}
+.text-accent{color:var(--accent)}
+.text-primary-color{color:var(--primary)}
+
+/* === 9. Callout 信息框（不同类型）=== */
+.callout{padding:14px 18px;margin:18px 0;border-radius:var(--radius);border-left:4px solid;font-size:15px;line-height:1.7}
+.callout-info{background:#ebf8ff;border-color:#3182ce;color:#2c5282}
+.callout-success{background:#f0fff4;border-color:#1a7f37;color:#22543d}
+.callout-warning{background:#fffff0;border-color:#9a6700;color:#744210}
+.callout-danger{background:#fff5f5;border-color:#cf222e;color:#742a2a}
+.callout-title{font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+
+/* === 10. 深色模式扩展 === */
+body.dark-mode .stat-card, body.dark-mode .data-card, body.dark-mode .kpi,
+body.dark-mode .timeline-item{background:var(--bg-card);border-color:var(--border)}
+body.dark-mode .stat-value, body.dark-mode .data-card-title, body.dark-mode .kpi-value,
+body.dark-mode .timeline-title{color:var(--primary)}
+body.dark-mode .callout{background:rgba(0,0,0,0.2)}
+body.dark-mode .data-card.success{background:rgba(34,84,61,0.2)}
+body.dark-mode .data-card.warning{background:rgba(116,66,16,0.2)}
+body.dark-mode .data-card.danger{background:rgba(116,42,42,0.2)}
+body.dark-mode .chip{background:var(--bg-accent);border-color:var(--border)}
+body.dark-mode .chip.chip-date, body.dark-mode .chip.chip-category{color:var(--primary);background:var(--bg-accent)}
+
+/* 移动端适配：隐藏侧边栏 */
+@media (max-width: 1400px){
+  .toc-sidebar, .key-conclusion{display:none}
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width: 768px){
+  .stat-grid{grid-template-columns:1fr}
+  .kpi-row{flex-direction:column}
+  .timeline{padding-left:24px}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+<nav class="nav">
+<a href="../index.html">🏠 主页</a>
+<a href="../summary.html">📊 储备项目汇总</a>
+<a href="#" onclick="window.print();return false">🖨 打印/导出PDF</a>
+<a href="./">📁 所有报告</a>
+<a href="#" style="float:right;background:rgba(255,255,255,0.15)" onclick="window.location=window.location.pathname.replace(/\.html?$/, '_m.html');return false">📱 手机版</a>
+</nav>
+<div class="hero">
+<div class="hero-content">
+<h1>晶能光电 V3 业务报告 vs Claude Code 原版 · 内容差距分析</h1>
+<div style="font-size:16px;opacity:0.9;margin-bottom:8px">商业尽调分析报告</div>
+<div class="meta">
+<div class="meta-item"><span class="meta-label">📅 报告日期</span><span class="meta-value">—</span></div>
+<div class="meta-item"><span class="meta-label">🏷 版本</span><span class="meta-value">V3.42.6</span></div>
+<div class="meta-item"><span class="meta-label">📋 类型</span><span class="meta-value">投研报告</span></div>
+<div class="meta-item"><span class="meta-label">⚙ 引擎</span><span class="meta-value">V3.42.4 学术研究增强</span></div>
+</div>
+</div>
+</div>
+<aside class="toc-sidebar"><h4>📑 目录</h4><ul><li class="lv-2"><a href="#_1">一、章节完整性对比</a></li>
+<li class="lv-3"><a href="#v3">⚠️ 章节错位（V3 没有按"行业 → 纵向 → 横向 → 估值 → 结论"标准结构）</a></li>
+<li class="lv-2"><a href="#v3-cc-16">二、V3 缺失 CC 的 16 项内容（按严重度）</a></li>
+<li class="lv-3"><a href="#p0-">🔴 P0 - 致命缺失（不修复 = 报告不可发布）</a></li>
+<li class="lv-3"><a href="#p1-">🟠 P1 - 严重缺失</a></li>
+<li class="lv-2"><a href="#_2">三、根因诊断</a></li>
+<li class="lv-3"><a href="#v3_1">为什么 V3 缺失了这些内容？</a></li>
+<li class="lv-2"><a href="#_3">四、修复方案（如何保持内容完整性）</a></li>
+<li class="lv-3"><a href="#a2-3">方案 A（快速版，2-3 小时）：补关键章节</a></li>
+<li class="lv-3"><a href="#b1-2">方案 B（完整版，1-2 天）：重写整个报告</a></li>
+<li class="lv-3"><a href="#c1">方案 C（深度版，1 周）：专业机构水准</a></li>
+<li class="lv-2"><a href="#_4">五、给主公的关键判断</a></li>
+<li class="lv-2"><a href="#_5">六、给主公的建议</a></li>
+<li class="lv-2"><a href="#_6">七、内容差距量化评分</a></li></ul></aside>
+<aside class="key-conclusion"><h4>⭐ 关键结论</h4><ul><li>• 5.4 最终判断</li>
+<li>• 4.5 估值合理性结论（双口径）</li>
+<li>• 数据 + 推理 + 结论</li>
+<li>• 结论明确度</li>
+<li>• 关键洞察：</li>
+<li>• 最大失分项 = 没有"最终判断"</li></ul></aside>
+<h1 id="v3-vs-claude-code">晶能光电 V3 业务报告 vs Claude Code 原版 · 内容差距分析</h1>
+<blockquote>
+<p>主公 09:19："你再对比一下 Claude Code 原先对于晶能光电的纵横分析法的报告。我记得它的报告还有一些内容，你这里面是没有的"</p>
+<p>严肃对比，找出 V3 业务报告（V3.42.6 终极修复版）缺失 CC 的内容</p>
+</blockquote>
+<hr />
+<div class="h-nav"><span class="prev disabled"><span class="label">已是第一章</span></span><a class="next" href="#v3-cc-16"><span class="label">下一章 →</span>二、V3 缺失 CC 的 16 项内容（按严重度）</a></div><h2 id="_1">一、章节完整性对比</h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>CC 原版</th>
+<th>V3 业务报告</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>章节数（H2）</strong></td>
+<td>7 大部分</td>
+<td>8 章节（含元数据）</td>
+<td>✅ 接近</td>
+</tr>
+<tr>
+<td><strong>子章节数（H3）</strong></td>
+<td>22</td>
+<td>18</td>
+<td>⚠️ 缺 4</td>
+</tr>
+<tr>
+<td><strong>业务实质性内容</strong></td>
+<td>5 大部分（导读+行业+纵向+横向+估值+结论+附录）</td>
+<td>5 大部分（KPI+纵向+横向+股权+并购+结论）</td>
+<td>⚠️ 章节错位</td>
+</tr>
+</tbody>
+</table>
+<h3 id="v3">⚠️ 章节错位（V3 没有按"行业 → 纵向 → 横向 → 估值 → 结论"标准结构）</h3>
+<p>CC 标准商业尽调结构：</p>
+<div class="codehilite" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>1. 报告导读（Executive Summary）
+2. 第一部分 行业分析（4 子章节）
+3. 第二部分 纵向演变（4 子章节）
+4. 第三部分 横向对标（4 子章节）
+5. 第四部分 估值分析（5 子章节）
+6. 第五部分 综合结论与风险（4 子章节）
+7. 数据来源与置信度说明
+</code></pre></div>
+
+<p>V3 当前结构：</p>
+<div class="codehilite" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>0. 元数据
+1. 工作流执行记录
+2. 一、关键业绩指标（KPI）
+3. 二、纵向分析（仅 3 子章节）
+4. 三、横向对标分析（仅 2 子章节）
+5. 四、股权结构
+6. 五、并购方案分析（仅 3 子章节）
+7. 六、关键发现：V1 → V2 提升
+8. 七、风险总览
+9. 八、附录
+</code></pre></div>
+
+<hr />
+<div class="h-nav"><a class="prev" href="#_1"><span class="label">← 上一章</span>一、章节完整性对比</a><a class="next" href="#_2"><span class="label">下一章 →</span>三、根因诊断</a></div><h2 id="v3-cc-16">二、V3 缺失 CC 的 16 项内容（按严重度）</h2>
+<h3 id="p0-">🔴 P0 - 致命缺失（不修复 = 报告不可发布）</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>CC 章节</th>
+<th>V3 状态</th>
+<th>内容深度差距</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>报告导读</strong>（核心结论 800 字）</td>
+<td>❌ 完全缺失</td>
+<td>没有 Executive Summary</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>1.1 LED芯片行业全景</strong>（上中下游规模）</td>
+<td>❌ 完全缺失</td>
+<td>产业链四环节 + 80/150/1500 亿美元规模</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>1.2 三种LED衬底技术对比</strong>（蓝宝石/碳化硅/硅）</td>
+<td>❌ 完全缺失</td>
+<td>物理特性 + 成本 + 性能对比表</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>1.3 行业市场规模</strong>（高增长细分赛道）</td>
+<td>❌ 完全缺失</td>
+<td>Mini LED / Micro LED / 车规 LED 渗透率</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>1.4 行业政策与产业趋势</strong></td>
+<td>❌ 完全缺失</td>
+<td>国家集成电路政策 + 江西省补贴</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>5.1 投资亮点</strong>（6 大亮点）</td>
+<td>❌ 完全缺失</td>
+<td>技术护城河 / 客户结构 / 盈利断层 / IDM / 战略协同 / 管理层</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>5.3 投资建议</strong>（7 维度评级）</td>
+<td>❌ 完全缺失</td>
+<td>行业前景 ⭐⭐⭐⭐ / 商业模式 ⭐⭐⭐⭐ / 盈利能力 ⭐⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>5.4 最终判断</strong>（800 字结论）</td>
+<td>❌ 完全缺失</td>
+<td>"晶能光电是中国LED芯片行业的异类"核心论断</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>数据来源与置信度说明</strong></td>
+<td>❌ 完全缺失</td>
+<td>4 个数据源 + 5 星可靠性评级</td>
+</tr>
+</tbody>
+</table>
+<h3 id="p1-">🟠 P1 - 严重缺失</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>CC 章节</th>
+<th>V3 状态</th>
+<th>差距</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10</td>
+<td><strong>2.2 收入结构演变</strong>（按事业部）</td>
+<td>❌ 缺失</td>
+<td>没有外延/芯片/器件/模组业务拆分</td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>2.3 业务定位演变</strong>（全品类→高端定制）</td>
+<td>❌ 缺失</td>
+<td>没有 MBO 前后战略转型分析</td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong>3.3 盈利能力断层归因</strong></td>
+<td>❌ 缺失</td>
+<td>没解释为何 21-28% 净利率 vs 同行 2-6%</td>
+</tr>
+<tr>
+<td>13</td>
+<td><strong>3.4 与同行技术参数对比</strong></td>
+<td>❌ 缺失</td>
+<td>没对比外延片尺寸 / 出光效率 / 良品率</td>
+</tr>
+<tr>
+<td>14</td>
+<td><strong>4.3 与同行可比公司估值对比</strong></td>
+<td>⚠️ 部分</td>
+<td>V3 有对比，但缺 P/E / EV/EBITDA 倍数</td>
+</tr>
+<tr>
+<td>15</td>
+<td><strong>4.4 多估值方法交叉验证</strong></td>
+<td>❌ 缺失</td>
+<td>缺 DCF / 可比 / Precedent 三法对比</td>
+</tr>
+<tr>
+<td>16</td>
+<td><strong>4.5 估值合理性结论（双口径）</strong></td>
+<td>⚠️ 部分</td>
+<td>V3 缺"27.5 亿 vs 40 亿"双口径并列对照</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<div class="h-nav"><a class="prev" href="#v3-cc-16"><span class="label">← 上一章</span>二、V3 缺失 CC 的 16 项内容（按严重度）</a><a class="next" href="#_3"><span class="label">下一章 →</span>四、修复方案（如何保持内容完整性）</a></div><h2 id="_2">三、根因诊断</h2>
+<h3 id="v3_1">为什么 V3 缺失了这些内容？</h3>
+<p><strong>根因 1：V3 是"快速生成"版本，不是"深度尽调"版本</strong></p>
+<p>V3 业务报告来源：</p>
+<div class="codehilite" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>1. 复跑 V2 业务报告（V3.42.4 学术研究增强版）
+2. 用了相同的 MD 源（jneng_v3424_v2.md）
+3. 只升级了 CSS 视觉效果（KPI 4 色 + Timeline className）
+4. 没有补内容深度
+</code></pre></div>
+
+<p><strong>根因 2：V3 报告严重依赖"本地收资材料"，缺少"行业分析/可比公司/估值方法"原始数据</strong></p>
+<p>V3 数据来源分布（来自 V3 报告附录 8.1 MANIFEST）：</p>
+<div class="codehilite" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>| **数据来源** | KG[0项] iFind[0项] 搜索[0项] 妙想[0项] **本地PDF[3项]** **本地OCR[5项]** 主公提供[1项] 横向对标[X项] |
+</code></pre></div>
+
+<p>CC 的数据来源分布：</p>
+<div class="codehilite" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>| 数据来源 | 文件 | 可靠性 |
+| 万融资本财务尽调报告 | 143 页审计级 | ⭐⭐⭐⭐⭐ |
+| 荣程集团项目报告 | 59 页内部尽调 | ⭐⭐⭐⭐ |
+| 初步法律尽调报告 | 248 页法律尽调 | ⭐⭐⭐⭐ |
+| 同行可比公司财务 | 三安/华灿/乾照年报 | ⭐⭐⭐⭐⭐ |
+</code></pre></div>
+
+<p><strong>CC 的数据广度是 V3 的 5 倍以上。</strong></p>
+<p><strong>根因 3：V3 没有"投资亮点 / 投资建议 / 最终判断"——这是尽调报告的灵魂</strong></p>
+<p>CC 第五部分（综合结论）：
+- 5.1 投资亮点：6 大亮点（技术护城河/客户结构/盈利断层/IDM/战略协同/管理层）
+- 5.2 风险提示：6 大风险（MBO 包袱/应收账款/客户集中/行业周期/换股方案/政府补贴）
+- 5.3 投资建议：7 维度评级
+- 5.4 最终判断：800 字核心论断</p>
+<p>V3 第七部分（风险总览）：
+- 🔴 红色风险（3 项）
+- 🟡 黄色风险（3 项）
+- 🟢 绿色信号（3 项）</p>
+<p><strong>V3 只有"风险"和"信号"，没有"投资亮点"、"投资建议"、"最终判断"</strong>——这是最严重的差距。</p>
+<hr />
+<div class="h-nav"><a class="prev" href="#_2"><span class="label">← 上一章</span>三、根因诊断</a><a class="next" href="#_4"><span class="label">下一章 →</span>五、给主公的关键判断</a></div><h2 id="_3">四、修复方案（如何保持内容完整性）</h2>
+<h3 id="a2-3">方案 A（快速版，2-3 小时）：补关键章节</h3>
+<p>微臣立即补充：
+1. 报告导读（Executive Summary，800 字）
+2. 行业分析（4 子章节，简版）
+3. 投资亮点（6 条）
+4. 投资建议（7 维度评级）
+5. 最终判断（800 字）
+6. 数据来源与置信度说明</p>
+<h3 id="b1-2">方案 B（完整版，1-2 天）：重写整个报告</h3>
+<p>需要 data 代理支持：
+1. 完整 LED 行业数据（产业链规模、政策、技术路线对比）
+2. 7 家可比公司 4 年财务对比
+3. 三种估值方法（DCF / 可比 / Precedent）
+4. 业务定位演变分析</p>
+<h3 id="c1">方案 C（深度版，1 周）：专业机构水准</h3>
+<p>需要完整数据源 + 多次复跑：
+1. 行业研究（Mini LED / Micro LED / 车规 LED 子赛道）
+2. 现场访谈
+3. 多源交叉验证
+4. 多假设敏感性分析</p>
+<hr />
+<div class="h-nav"><a class="prev" href="#_3"><span class="label">← 上一章</span>四、修复方案（如何保持内容完整性）</a><a class="next" href="#_5"><span class="label">下一章 →</span>六、给主公的建议</a></div><h2 id="_4">五、给主公的关键判断</h2>
+<p><strong>主公当前问的"如何保持内容完整性"，根本答案是：</strong></p>
+<blockquote>
+<p><strong>CSS 视觉升级 ≠ 内容升级。</strong></p>
+<p>V3.42.6 修复的是 <strong>CSS 视觉</strong>（KPI 4 色 / Timeline 显式 className），不是 <strong>业务内容深度</strong>。</p>
+<p>CC 原版的"行业分析 / 投资亮点 / 最终判断 / 数据置信度"——这些是 <strong>数据 + 推理 + 结论</strong> 的深度内容，<strong>不可能靠 CSS 升级出来</strong>，必须由 data 代理 + research 代理 + main 代理共同完成。</p>
+</blockquote>
+<hr />
+<div class="h-nav"><a class="prev" href="#_4"><span class="label">← 上一章</span>五、给主公的关键判断</a><a class="next" href="#_6"><span class="label">下一章 →</span>七、内容差距量化评分</a></div><h2 id="_5">六、给主公的建议</h2>
+<p>微臣建议：<strong>方案 A（快速版 2-3 小时）</strong>——立即补充缺失的 6 个核心章节。</p>
+<p>具体步骤：
+1. 微臣先写出 6 个章节的<strong>初稿</strong>（基于已有 V3 内容 + CC 原版的章节框架）
+2. 与主公确认初稿质量
+3. 主公决定是否继续深化（方案 B / C）</p>
+<p><strong>微臣建议立即开始方案 A。</strong> 主公是否批准？</p>
+<hr />
+<div class="h-nav"><a class="prev" href="#_5"><span class="label">← 上一章</span>六、给主公的建议</a><span class="next disabled"><span class="label">已是最后一章</span></span></div><h2 id="_6">七、内容差距量化评分</h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>CC 原版</th>
+<th>V3 业务报告</th>
+<th>差距</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>内容深度</strong></td>
+<td>95</td>
+<td>60</td>
+<td><strong>-35</strong></td>
+</tr>
+<tr>
+<td><strong>业务逻辑</strong></td>
+<td>95</td>
+<td>70</td>
+<td>-25</td>
+</tr>
+<tr>
+<td><strong>数据广度</strong></td>
+<td>90</td>
+<td>50</td>
+<td>-40</td>
+</tr>
+<tr>
+<td><strong>分析深度</strong></td>
+<td>95</td>
+<td>55</td>
+<td>-40</td>
+</tr>
+<tr>
+<td><strong>结论明确度</strong></td>
+<td>90</td>
+<td>30</td>
+<td><strong>-60</strong>（缺最终判断）</td>
+</tr>
+<tr>
+<td><strong>视觉表现</strong></td>
+<td>80</td>
+<td>95</td>
+<td><strong>+15</strong></td>
+</tr>
+<tr>
+<td><strong>综合评分</strong></td>
+<td><strong>91</strong></td>
+<td><strong>62</strong></td>
+<td><strong>-29</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键洞察：</strong>
+- V3 在视觉上 <strong>超越</strong> CC（95 vs 80）
+- V3 在内容上 <strong>严重落后</strong> CC（60 vs 95）
+- 整体被 CC 反超 -29 分
+- <strong>最大失分项 = 没有"最终判断"</strong>（占 -60 分）</p>
+<hr />
+<p><em>该报告已生成 markdown 源文件，待主公批准方案 A 后，立即补充缺失的 6 个核心章节。</em></p>
+<button id="back-to-top" title="回到顶部">↑</button>
+<button id="fullscreen-toggle" title="全屏模式（F11 / 点此）">⛶</button>
+<div id="section-indicator"><span id="section-current">1</span> / <span id="section-total">—</span> 章</div>
+<button id="dark-mode-toggle" title="切换深色模式">🌙</button>
+</body>
+</html>
