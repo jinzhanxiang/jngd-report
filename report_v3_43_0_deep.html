@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>晶能光电商业尽调（V3.43.0 深度模式完整版）</title>
+<title>晶能光电商业尽调（V3.43.4 深度模式完整版）</title>
 <script>
 (function(){
   var ua = navigator.userAgent || navigator.vendor || window.opera;
@@ -790,7 +790,7 @@ body.dark-mode .chip.chip-date, body.dark-mode .chip.chip-category{color:var(--p
 </nav>
 <div class="hero">
 <div class="hero-content">
-<h1>晶能光电商业尽调（V3.43.0 深度模式完整版）</h1>
+<h1>晶能光电商业尽调（V3.43.4 深度模式完整版）</h1>
 <div style="font-size:16px;opacity:0.9;margin-bottom:8px">商业尽调分析报告</div>
 <div class="meta">
 <div class="meta-item"><span class="meta-label">📅 报告日期</span><span class="meta-value">2026-07-04</span></div>
@@ -862,7 +862,7 @@ body.dark-mode .chip.chip-date, body.dark-mode .chip.chip-category{color:var(--p
 <li>• 未来风险点</li>
 <li>• 晶能是关键卡位企业</li>
 <li>• 降低换股定价风险</li></ul></aside>
-<h1 id="v3430">晶能光电商业尽调（V3.43.0 深度模式完整版）</h1>
+<h1 id="v3430">晶能光电商业尽调（V3.43.4 深度模式完整版）</h1>
 <blockquote>
 <p><strong>方法论四源</strong>：Saussure 历时-共时 / Cook &amp; Campbell 纵横向 / Yin 案例研究 / Porter 竞争战略
 <strong>数据采集</strong>：2026-07-04 / 桌面 4 PDF + 3 PNG + iFind 5 技能 + AKShare 8 家 + Tavily + arXiv 4 篇（已核实）
@@ -3672,7 +3672,7 @@ body.dark-mode .chip.chip-date, body.dark-mode .chip.chip-category{color:var(--p
 <li><strong>arXiv 引用方法论</strong>：沉淀为可复用的"学术验证 SOP"</li>
 </ol>
 <hr />
-<p><strong>报告结束｜V3.43.0 深度模式完整版（~30K）+ 11 个交叉洞察 + 6 维度对标 + arXiv 4 篇逐篇解析 + 5 段附录 + 字数配方门控全部命中</strong></p>
+<p><strong>报告结束｜V3.43.4 深度模式完整版（~30K）+ 11 个交叉洞察 + 6 维度对标 + arXiv 4 篇逐篇解析 + 5 段附录 + 字数配方门控全部命中</strong></p>
 <button id="back-to-top" title="回到顶部">↑</button>
 <button id="fullscreen-toggle" title="全屏模式（F11 / 点此）">⛶</button>
 <div id="section-indicator"><span id="section-current">1</span> / <span id="section-total">—</span> 章</div>
@@ -3718,7 +3718,7 @@ body.dark-mode .chip.chip-date, body.dark-mode .chip.chip-category{color:var(--p
       }
     });
   });
-  // ESC 关闭
+  // ESC 关闭 + body padding 避让（V3.43.4 修复遮挡）
   document.addEventListener('keydown', function(e){
     if (e.key !== 'Escape') return;
     document.querySelectorAll('.toc-sidebar.open, .key-conclusion.open').forEach(function(side){
@@ -3727,7 +3727,30 @@ body.dark-mode .chip.chip-date, body.dark-mode .chip.chip-category{color:var(--p
       side.classList.remove('open');
       if (btn && btn.dataset.origLabel) btn.innerHTML = btn.dataset.origLabel;
     });
+    document.body.style.paddingLeft = '';
+    document.body.style.paddingRight = '';
   });
+
+  // 监听 .open 变化 → 动态调整 body padding 避免遮挡
+  function syncBodyPadding(){
+    var tocOpen = document.querySelector('.toc-sidebar.open');
+    var kcOpen = document.querySelector('.key-conclusion.open');
+    if (tocOpen) {
+      document.body.style.paddingLeft = '260px';
+    } else {
+      document.body.style.paddingLeft = '';
+    }
+    if (kcOpen) {
+      document.body.style.paddingRight = '280px';
+    } else {
+      document.body.style.paddingRight = '';
+    }
+  }
+  document.querySelectorAll('.toc-sidebar, .key-conclusion').forEach(function(side){
+    new MutationObserver(syncBodyPadding).observe(side, {attributes:true, attributeFilter:['class']});
+  });
+  // 初始状态
+  syncBodyPadding();
 })();
 </script></body>
 </html>
