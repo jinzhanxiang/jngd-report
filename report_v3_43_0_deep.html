@@ -132,6 +132,29 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   window.addEventListener('scroll', updateActiveToc);
   updateActiveToc();
+
+  /* V3.43.1 浮动侧边栏切换按钮 - 默认收起避免遮挡 */
+  function makeToggle(targetSel, btnId, label){
+    var btn = document.createElement('button');
+    btn.id = btnId;
+    btn.className = btnId;
+    btn.innerHTML = label;
+    btn.setAttribute('aria-label', '切换' + label);
+    btn.onclick = function(){
+      var target = document.querySelector(targetSel);
+      if (!target) return;
+      target.classList.toggle('open');
+      var isOpen = target.classList.contains('open');
+      btn.innerHTML = isOpen ? '✕ 关闭' : label;
+    };
+    document.body.appendChild(btn);
+  }
+  if (document.querySelector('.toc-sidebar') && !document.querySelector('.toc-sidebar-toggle')){
+    makeToggle('.toc-sidebar', 'toc-sidebar-toggle', '📑 目录');
+  }
+  if (document.querySelector('.key-conclusion') && !document.querySelector('.key-conclusion-toggle')){
+    makeToggle('.key-conclusion', 'key-conclusion-toggle', '⭐ 关键结论');
+  }
 });
 
 
@@ -203,7 +226,9 @@ hr{border:none;border-top:1px solid #e2e8f0;margin:32px 0}
 #progress-bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#d69e2e,#1a365d);z-index:9999;transition:width 0.1s ease-out}
 
 /* ===== V3.42.3 增强 2: 浮动 TOC 侧边栏 ===== */
-.toc-sidebar{position:fixed;left:20px;top:120px;width:220px;max-height:70vh;overflow-y:auto;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px;font-size:13px;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.04)}
+.toc-sidebar{position:fixed;left:0;top:120px;width:220px;max-height:70vh;overflow-y:auto;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px;font-size:13px;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.04);transform:translateX(calc(-100% - 30px));transition:transform 0.3s ease}
+.toc-sidebar.open{transform:translateX(20px)}
+.toc-sidebar-toggle{position:fixed;left:20px;top:160px;z-index:99;background:#1a365d;color:#fff;border:none;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(26,54,93,0.3)}
 .toc-sidebar h4{font-size:14px;color:#1a365d;margin:0 0 10px;padding-bottom:8px;border-bottom:2px solid #d69e2e;font-weight:700}
 .toc-sidebar ul{list-style:none;margin:0;padding:0}
 .toc-sidebar li{margin:4px 0;font-size:13px}
@@ -214,7 +239,9 @@ hr{border:none;border-top:1px solid #e2e8f0;margin:32px 0}
 .toc-sidebar a.active{color:#1a365d;background:#fef5e7;font-weight:600;border-left:2px solid #d69e2e;padding-left:4px}
 
 /* ===== V3.42.3 增强 3: 浮动"关键结论"卡片 ===== */
-.key-conclusion{position:fixed;right:20px;top:120px;width:240px;max-height:70vh;overflow-y:auto;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:2px solid #d69e2e;border-radius:10px;padding:14px;font-size:13px;z-index:100;box-shadow:0 4px 12px rgba(214,158,46,0.15)}
+.key-conclusion{position:fixed;right:0;top:120px;width:240px;max-height:70vh;overflow-y:auto;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:2px solid #d69e2e;border-radius:10px;padding:14px;font-size:13px;z-index:100;box-shadow:0 4px 12px rgba(214,158,46,0.15);transform:translateX(calc(100% + 30px));transition:transform 0.3s ease}
+.key-conclusion.open{transform:translateX(-20px)}
+.key-conclusion-toggle{position:fixed;right:20px;top:160px;z-index:99;background:linear-gradient(135deg,#fef3c7,#fde68a);border:2px solid #d69e2e;color:#744210;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(214,158,46,0.3)}
 .key-conclusion h4{font-size:14px;color:#744210;margin:0 0 10px;padding-bottom:8px;border-bottom:2px solid #d69e2e;font-weight:700}
 .key-conclusion ul{list-style:none;margin:0;padding:0}
 .key-conclusion li{margin:6px 0;font-size:13px;color:#744210;padding:4px 0;border-bottom:1px dashed #d69e2e}
