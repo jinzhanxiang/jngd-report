@@ -25,27 +25,50 @@ img { max-width: 100%; height: auto; }
 .decision-box .title { font-size: 1.2em; font-weight: bold; color: #c53030; }
 .decision-box .content { margin-top: 10px; }
 
-/* ===== enhance_report: 浮动侧边栏（默认收起） ===== */
-.toc-sidebar, .key-conclusion{transition:transform 0.3s ease}
-.toc-sidebar:not(.open){transform:translateX(calc(-100% - 30px))}
-.toc-sidebar.open{transform:translateX(20px)}
-.key-conclusion:not(.open){transform:translateX(calc(100% + 30px))}
-.key-conclusion.open{transform:translateX(-20px)}
+/* ===== enhance_report: 浮动侧边栏（默认收起）V14.0 重大修复 ===== */
+/* ⚠️ FIX V14.0: 必须用 position:fixed，否则 transform 偏移会依赖文档流造成布局错乱 */
+.toc-sidebar, .key-conclusion{
+  position:fixed !important;top:80px;z-index:90;
+  width:240px;max-height:75vh;overflow-y:auto;
+  padding:14px;border-radius:8px;
+  background:#fff;border:1px solid #e2e8f0;
+  box-shadow:0 4px 16px rgba(0,0,0,0.12);
+  font-size:13px;line-height:1.55;
+  transition:transform 0.3s ease,left 0.3s ease,right 0.3s ease;
+  box-sizing:border-box;
+}
+.toc-sidebar{left:0}
+.key-conclusion{right:0}
+.toc-sidebar:not(.open){transform:translateX(calc(-100% - 20px))}
+.toc-sidebar.open{transform:translateX(10px)}
+.key-conclusion:not(.open){transform:translateX(calc(100% + 20px))}
+.key-conclusion.open{transform:translateX(-10px)}
 .toc-sidebar-toggle, .key-conclusion-toggle{
   position:fixed;z-index:99;padding:10px 14px;border-radius:8px;
   cursor:pointer;font-size:13px;font-weight:600;border:none;
   box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  white-space:nowrap;
 }
 .toc-sidebar-toggle{top:120px;left:20px;background:#1a365d;color:#fff}
 .key-conclusion-toggle{top:120px;right:20px;background:linear-gradient(135deg,#fef3c7,#fde68a);border:2px solid #d69e2e;color:#744210}
-/* ⚠️ FIX V3.43.3: 防止侧栏展开时遮挡正文（移动端尤其严重） */
+/* ⚠️ FIX V14.0: 移动端严格按 viewport 计算，不让按钮超出屏外 */
 @media (max-width:768px){
-  .toc-sidebar{width:160px !important;max-width:60vw !important;font-size:12px !important;padding:10px !important}
-  .key-conclusion{width:180px !important;max-width:65vw !important;font-size:12px !important;padding:10px !important}
-  .toc-sidebar-toggle, .key-conclusion-toggle{padding:8px 10px !important;font-size:12px !important}
+  .toc-sidebar, .key-conclusion{
+    width:200px !important;max-width:65vw !important;
+    font-size:12px !important;padding:10px !important;
+    top:70px;
+  }
+  .toc-sidebar-toggle, .key-conclusion-toggle{
+    padding:8px 10px !important;font-size:12px !important;
+    top:90px !important;
+  }
+  .toc-sidebar-toggle{left:8px !important}
+  .key-conclusion-toggle{right:8px !important}
 }
-/* ⚠️ FIX V3.43.3: 侧栏内部滚动，避免超出屏幕 */
-.toc-sidebar, .key-conclusion{max-height:75vh;overflow-y:auto}
+@media (max-width:420px){
+  .toc-sidebar, .key-conclusion{width:160px !important;max-width:55vw !important;font-size:11px !important}
+}
+/* ===== 关键结论 callout ===== */
 /* ===== 关键结论 callout ===== */
 .callout-conclusion{background:linear-gradient(135deg,#fffbeb,#fef3c7);
   border-left:4px solid #d69e2e;padding:18px 22px;margin:24px 0;border-radius:0 8px 8px 0;
@@ -71,6 +94,35 @@ body.dark-mode .theme-toggle-btn{background:#1a202c;border-color:#d69e2e}
 @media (max-width:768px){
   .theme-toggle-btn{width:38px;height:38px;font-size:18px;top:14px;right:14px}
 }
+/* ⚠️ FIX V14.0: 深色模式全局覆盖（背景、文字、表格、链接等） */
+body.dark-mode{background:#0f172a !important;color:#e2e8f0 !important}
+body.dark-mode .toc-sidebar, body.dark-mode .key-conclusion{
+  background:#1e293b !important;border-color:#334155 !important;color:#e2e8f0 !important
+}
+body.dark-mode .toc-sidebar a, body.dark-mode .key-conclusion a{color:#93c5fd !important}
+body.dark-mode .toc-sidebar a:hover, body.dark-mode .key-conclusion a:hover{color:#fbbf24 !important}
+body.dark-mode table{background:#1e293b !important;color:#e2e8f0 !important;border-color:#334155 !important}
+body.dark-mode table th, body.dark-mode table td{border-color:#334155 !important;color:#e2e8f0 !important}
+body.dark-mode table thead{background:#334155 !important}
+body.dark-mode table tr:nth-child(even){background:#0f172a !important}
+body.dark-mode h1, body.dark-mode h2, body.dark-mode h3, body.dark-mode h4, body.dark-mode h5{color:#f1f5f9 !important}
+body.dark-mode p, body.dark-mode li, body.dark-mode blockquote{color:#e2e8f0 !important}
+body.dark-mode a:not(.toc-h2):not(.toc-h3):not(.toc-h3){color:#93c5fd !important}
+body.dark-mode .callout-conclusion{
+  background:linear-gradient(135deg,#451a03,#78350f) !important;
+  border-left-color:#fbbf24 !important;color:#fef3c7 !important
+}
+body.dark-mode .callout-conclusion h2, body.dark-mode .callout-conclusion h3{
+  color:#fbbf24 !important;border-bottom-color:#fbbf24 !important
+}
+body.dark-mode .callout-h{background:#1e293b !important;border-left-color:#fbbf24 !important;color:#e2e8f0 !important}
+body.dark-mode .key-conclusion-toggle{
+  background:linear-gradient(135deg,#451a03,#78350f) !important;color:#fef3c7 !important
+}
+body.dark-mode .chart-figure{background:#1e293b !important;border-color:#334155 !important}
+body.dark-mode .chart-figure svg{filter:invert(0.85) hue-rotate(180deg)}
+body.dark-mode .toc-sidebar-toggle{background:#1e293b !important;color:#fbbf24 !important;border:1px solid #fbbf24}
+body.dark-mode .key-conclusion-toggle{color:#fef3c7 !important}
 
 </style>
 </head>
@@ -9217,7 +9269,8 @@ Phase 4：决策支持（§22-§25）→ 最终建议：交易+退出+IRR
     // 包装原 onclick：点击切换 + 自动关闭其它侧栏
     var origOnClick = btn.onclick;
     btn.onclick = function(e){
-      e.stopPropagation();
+      // V14.0 FIX: 防御 e 为 undefined（直接调用 onclick() 测试场景）
+      if (e && e.stopPropagation) e.stopPropagation();
       if (origOnClick) origOnClick.call(this, e);
       // 关闭对侧
       var isToc = btnSel.indexOf('toc') >= 0;
