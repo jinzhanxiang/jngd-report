@@ -56,7 +56,7 @@ img { max-width: 100%; height: auto; }
   .toc-sidebar, .key-conclusion{
     width:200px !important;max-width:65vw !important;
     font-size:12px !important;padding:10px !important;
-    top:70px;
+    top:140px;
   }
   .toc-sidebar-toggle, .key-conclusion-toggle{
     padding:8px 10px !important;font-size:12px !important;
@@ -64,9 +64,12 @@ img { max-width: 100%; height: auto; }
   }
   .toc-sidebar-toggle{left:8px !important}
   .key-conclusion-toggle{right:8px !important}
+  /* H1 预留顶部空间避免被侧栏遮挡 */
+  body h1{padding-top:80px !important;margin-top:0 !important}
 }
 @media (max-width:420px){
   .toc-sidebar, .key-conclusion{width:160px !important;max-width:55vw !important;font-size:11px !important}
+  body h1{padding-top:60px !important}
 }
 /* ===== 关键结论 callout ===== */
 /* ===== 关键结论 callout ===== */
