@@ -1,0 +1,576 @@
+<style id="toc-sidebar">
+/* ===== enhance_report: 浮动侧边栏（默认收起）V14.0 重大修复 ===== */
+/* ⚠️ FIX V14.0: 必须用 position:fixed，否则 transform 偏移会依赖文档流造成布局错乱 */
+.toc-sidebar, .key-conclusion{
+  position:fixed !important;top:80px;z-index:90;
+  width:240px;max-height:75vh;overflow-y:auto;
+  padding:14px;border-radius:8px;
+  background:#fff;border:1px solid #e2e8f0;
+  box-shadow:0 4px 16px rgba(0,0,0,0.12);
+  font-size:13px;line-height:1.55;
+  transition:transform 0.3s ease,left 0.3s ease,right 0.3s ease;
+  box-sizing:border-box;
+}
+.toc-sidebar{left:0}
+.key-conclusion{right:0}
+/* V15.2.7 FIX: 默认完全隐藏（不占据浮动位置）避免视口外 borderLeft 残留 */
+.toc-sidebar:not(.open){transform:translateX(calc(-100% - 20px));visibility:hidden;opacity:0;pointer-events:none}
+.toc-sidebar.open{transform:translateX(10px);visibility:visible;opacity:1;pointer-events:auto}
+.key-conclusion:not(.open){transform:translateX(calc(100% + 20px));visibility:hidden;opacity:0;pointer-events:none}
+.key-conclusion.open{transform:translateX(-10px);visibility:visible;opacity:1;pointer-events:auto}
+/* ⚠️ V15.2.10 FIX: PC 端默认隐藏 toggle 按钮（主公 2026-07-15 08:23 反馈"PC 端像手机版"）
+   toggle 按钮在桌面端默认隐藏，只在 < 768px 移动端显示，避免桌面端误以为窄屏 */
+.toc-sidebar-toggle, .key-conclusion-toggle{display:none !important}
+.toc-sidebar-toggle, .key-conclusion-toggle{
+  position:fixed;z-index:99;padding:10px 14px;border-radius:8px;
+  cursor:pointer;font-size:13px;font-weight:600;border:none;
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  white-space:nowrap;
+}
+.toc-sidebar-toggle{top:120px;left:20px;background:#1a365d;color:#fff}
+.key-conclusion-toggle{top:120px;right:20px;background:linear-gradient(135deg,#fef3c7,#fde68a);border:2px solid #d69e2e;color:#744210}
+/* ⚠️ FIX V15.0: TOC 标题 + 列表完整排版（解决"打开后排版混乱"） */
+.toc-sidebar .toc-title{
+  font-size:14px !important;font-weight:700 !important;
+  color:#1a365d !important;margin:0 0 10px 0 !important;
+  padding-bottom:8px !important;border-bottom:2px solid #1a365d !important;
+  text-align:left !important;line-height:1.4 !important;
+}
+.toc-sidebar .toc-list, .toc-sidebar ul.toc-list{
+  list-style:none !important;margin:0 !important;padding:0 !important;
+  max-height:65vh !important;overflow-y:auto !important;
+}
+.toc-sidebar .toc-list li, .toc-sidebar ul.toc-list > li{
+  margin:0 !important;padding:0 !important;line-height:1.5 !important;
+  border:none !important;
+}
+.toc-sidebar .toc-list a, .toc-sidebar ul.toc-list a{
+  display:block !important;padding:6px 10px !important;
+  color:#1a365d !important;text-decoration:none !important;
+  font-size:13px !important;line-height:1.5 !important;
+  border-radius:4px !important;transition:background 0.15s ease !important;
+  word-break:break-word !important;
+}
+.toc-sidebar .toc-list a:hover, .toc-sidebar ul.toc-list a:hover{
+  background:#f1f5f9 !important;color:#0f172a !important;
+}
+.toc-sidebar .toc-list .toc-h2, .toc-sidebar ul.toc-list > li > a.toc-h2{
+  font-weight:700 !important;font-size:13px !important;
+  color:#1a365d !important;margin-top:6px !important;
+  border-left:3px solid #1a365d !important;
+}
+.toc-sidebar .toc-list .toc-h3, .toc-sidebar ul.toc-list ul > li > a.toc-h3{
+  font-weight:400 !important;font-size:12px !important;
+  color:#475569 !important;padding-left:22px !important;
+  border-left:1px solid #cbd5e1 !important;
+}
+.toc-sidebar .toc-list ul, .toc-sidebar ul.toc-list ul{
+  list-style:none !important;margin:0 !important;padding:0 !important;
+}
+.toc-sidebar::-webkit-scrollbar{width:6px}
+.toc-sidebar::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+.toc-sidebar::-webkit-scrollbar-track{background:#f1f5f9}
+/* Key Conclusion 排版 */
+.key-conclusion .toc-title{
+  font-size:14px !important;font-weight:700 !important;
+  color:#744210 !important;margin:0 0 10px 0 !important;
+  padding-bottom:8px !important;border-bottom:2px solid #d69e2e !important;
+  text-align:left !important;
+}
+.key-conclusion .toc-list, .key-conclusion ul.toc-list{
+  list-style:none !important;margin:0 !important;padding:0 !important;
+}
+.key-conclusion .toc-list li{margin:0 0 8px 0 !important;padding:0 !important;line-height:1.5 !important}
+.key-conclusion .toc-list a{
+  display:block !important;padding:6px 10px !important;
+  color:#744210 !important;text-decoration:none !important;
+  font-size:13px !important;border-radius:4px !important;
+}
+.key-conclusion .toc-list a:hover{background:#fef3c7 !important}
+/* ⚠️ V15.2.11 主公 2026-07-15 09:27:52 指令：彻底删除手机界面，全部采用 PC 版
+   原 @media (max-width:768px) 和 @media (max-width:420px) 整块删除
+   后续需要移动端适配时，再重新设计 */
+
+/* ===== 关键结论 callout ===== */
+.callout-conclusion{background:linear-gradient(135deg,#fffbeb,#fef3c7);
+  border-left:4px solid #d69e2e;padding:18px 22px;margin:24px 0;border-radius:0 8px 8px 0;
+  box-shadow:0 2px 6px rgba(214,158,46,0.1)}
+.callout-conclusion h2, .callout-conclusion h3{
+  color:#744210;border-bottom:2px solid #d69e2e;padding-bottom:8px;margin-top:0}
+.callout-conclusion ul{padding-left:20px}
+
+# ⚠️ V15.2.9 主公 2026-07-15 08:15 反馈：完全去除深色模式（点击浅色不切换 + 深色模式退化）
+# 兜底决策：彻底删除所有 @media (prefers-color-scheme:dark) 和 body.dark-mode CSS
+# 历史：V13.0 加 dark CSS → V15.2.6 锁定 → V15.2.8 增强 dark → V15.2.9 全删
+# 未来若需重新支持深色模式，需重新设计：优先用 prefers-color-scheme media query + JS 切换双轨
+
+/* === V15.1 ASCII 块转专属图表 === */
+.ascii-figure{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  margin:14px 0;padding:12px;
+  background:#f7fafc;border:1px solid #e2e8f0;border-radius:6px;
+  font-size:14px;
+}
+.ascii-figure-title{
+  font-size:14px;font-weight:700;color:#1a365d;
+  margin-bottom:10px;padding-bottom:6px;
+  border-bottom:1px dashed #cbd5e0;
+}
+.ascii-treemap-bar{
+  display:flex;width:100%;min-height:140px;
+  border-radius:4px;overflow:hidden;
+  border:1px solid #cbd5e0;
+}
+.ascii-treemap-cell{
+  display:flex;flex-direction:column;
+  justify-content:center;align-items:center;
+  padding:8px 4px;color:#fff;
+  font-weight:600;text-align:center;
+  border-right:1px solid rgba(255,255,255,0.4);
+  box-sizing:border-box;
+  overflow:hidden;min-width:0;
+}
+.ascii-treemap-cell:last-child{border-right:none}
+/* ⚠️ V15.2.11 主公 2026-07-15 09:12:22 反馈：Treemap 拥挤
+   窄块（<8% 宽度）隐藏文字名称，只显示百分比 */
+.ascii-treemap-cell.narrow .ascii-treemap-name{display:none}
+/* ⚠️ V15.2.13 主公 2026-07-15 11:13 指令：水平堆叠条 CSS（替代 Treemap） */
+.ascii-treemap-rows{display:flex;flex-direction:column;gap:10px;padding:4px 0}
+.ascii-treemap-row{
+  display:flex;align-items:center;gap:12px;
+  font-size:14px;
+}
+.ascii-treemap-row-label{
+  flex:0 0 220px;font-weight:700;font-size:14px;
+  line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.ascii-treemap-row-bar{
+  flex:1;height:22px;background:#edf2f7;
+  border-radius:4px;overflow:hidden;border:1px solid #cbd5e0;
+  min-width:120px;
+}
+.ascii-treemap-row-fill{
+  height:100%;border-radius:3px;
+  transition:width 0.3s ease-out;
+}
+.ascii-treemap-row-pct{
+  flex:0 0 80px;font-weight:700;font-size:15px;
+  text-align:right;line-height:1.2;
+}
+
+/* ⚠️ V15.2.13 主公 2026-07-15 11:13 指令：横向时间线 CSS（替代垂直流程图） */
+.ascii-flow-row{
+  display:flex;flex-direction:row;align-items:stretch;gap:6px;
+  padding:12px 8px;overflow-x:auto;overflow-y:hidden;
+  flex-wrap:nowrap;
+  min-height:120px;
+}
+.ascii-flow-row::-webkit-scrollbar{height:8px}
+.ascii-flow-row::-webkit-scrollbar-thumb{background:#cbd5e0;border-radius:4px}
+.ascii-flow-node{
+  flex:0 0 auto;min-width:120px;max-width:200px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+}
+.ascii-flow-dot{
+  width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(135deg,#1a365d,#2c5282);
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:14px;
+  box-shadow:0 2px 4px rgba(26,54,93,0.25);
+  flex-shrink:0;
+}
+.ascii-flow-num{line-height:1}
+.ascii-flow-card{
+  width:100%;background:#fff;
+  border:1px solid #cbd5e0;border-radius:6px;
+  padding:8px 10px;text-align:center;
+  box-shadow:0 1px 2px rgba(0,0,0,0.04);
+}
+.ascii-flow-name{font-weight:700;font-size:13px;color:#1a365d;line-height:1.3}
+.ascii-flow-desc{font-size:12px;color:#4a5568;line-height:1.35;margin-top:4px}
+.ascii-flow-arrow{
+  flex:0 0 auto;color:#1a365d;font-size:20px;font-weight:700;
+  align-self:center;padding:0 4px;line-height:1;
+}
+
+/* ⚠️ V15.2.13 主公 2026-07-15 11:13 指令：图例加 4 色块标识 */
+.chart-legend-auto{
+  display:flex;gap:14px;align-items:center;flex-wrap:wrap;
+  margin:14px 0;padding:10px 14px;background:#fffbeb;
+  border:2px solid #d69e2e;border-radius:8px;
+  font-size:13px;color:#1a202c;max-width:100%;
+}
+.lg-item{
+  display:inline-flex;align-items:center;gap:6px;
+  font-weight:600;color:#1a202c;
+}
+.lg-dot{
+  display:inline-block !important;
+  width:16px !important;height:16px !important;
+  min-width:16px;min-height:16px;
+  border-radius:3px;
+  border:1px solid rgba(0,0,0,0.15);
+  flex-shrink:0;
+  vertical-align:middle;
+  background-clip:padding-box;
+}
+.ascii-treemap-pct{font-size:15px;font-weight:700;line-height:1.2}
+.ascii-treemap-name{font-size:12px;line-height:1.25;margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.ascii-bars-list{display:flex;flex-direction:column;gap:8px}
+.ascii-bar-row{
+  display:flex;align-items:center;gap:12px;
+  font-size:13px;color:#2d3748;
+}
+.ascii-bar-label{flex:0 0 320px;line-height:1.4;overflow:hidden;text-overflow:ellipsis}
+.ascii-bar-track{flex:1;height:16px;background:#edf2f7;border-radius:3px;overflow:hidden;border:1px solid #cbd5e0}
+.ascii-bar-fill{height:100%;border-radius:2px;transition:width 0.3s}
+.ascii-tree-list{display:flex;flex-direction:column;gap:4px}
+.ascii-tree-row{padding:4px 0 4px 8px;line-height:1.5;font-size:13px}
+.ascii-tree-l0{font-weight:700;color:#1a365d}
+/* ⚠️ V15.2.9 主公 2026-07-15 08:15 反馈：完全去除深色模式
+   删除全部 ASCII 图表的 body.dark-mode 覆盖（12 行） */
+.ascii-tree-l1{font-weight:500;color:#2c5282}
+.ascii-tree-l2{color:#4a5568}
+
+</style>
+<div class="toc-sidebar"><div class="toc-title">📑 章节导航（共 37 节）</div>
+<ul class="toc-list">
+<li><a href="#auto-h-1-579fe3" class="toc-h2">一、股权结构分类汇总（终版，参考启源芯方案格式，根据5.25专题会修订）</a>
+<ul class="toc-sub">
+<li><a href="#auto-h-101-9c06bf" class="toc-h3">数据质量标注说明</a>
+</ul>
+</ul>
+<li><a href="#auto-h-2-846ecf" class="toc-h2">二、核心分类逻辑：两类PE的本质区别</a>
+<ul class="toc-sub">
+<li><a href="#auto-h-102-de7666" class="toc-h3">2.1 分类框架</a>
+<li><a href="#auto-h-103-cd395f" class="toc-h3">2.2 A组 vs B组的关键差异</a>
+</ul>
+</ul>
+<li><a href="#auto-h-3-98c99f" class="toc-h2">三、A组「必须退出」详细分析（天保直接收购对象）</a>
+<ul class="toc-sub">
+<li><a href="#auto-h-104-643a51" class="toc-h3">3.1 A组10家汇总</a>
+<li><a href="#auto-h-105-5535f6" class="toc-h3">3.2 A组按派系分析</a>
+<li><a href="#auto-h-201-842799" class="toc-h4">A1 兴业系（6.05%）— 规模最大，银行理财子合规压力</a>
+<li><a href="#auto-h-202-e16208" class="toc-h4">A2 海通系（2.28%）— 已有仲裁，关系破裂最彻底</a>
+<li><a href="#auto-h-203-38b340" class="toc-h4">A3 浙江国资系（3.72%）— 沨石+沨行景纬</a>
+<li><a href="#auto-h-204-62826c" class="toc-h4">A4 粤开系（1.09%）— 券商直投退出</a>
+<li><a href="#auto-h-205-4fd6c6" class="toc-h4">A5 中兵慧明系（0.60%）— 二审中，最急迫</a>
+<li><a href="#auto-h-106-d1ee52" class="toc-h3">3.3 A组收购总预算</a>
+</ul>
+</ul>
+<li><a href="#auto-h-4-dbaf09" class="toc-h2">四、B组「有对赌但谋求合作上市」详细分析</a>
+<ul class="toc-sub">
+<li><a href="#auto-h-107-be8538" class="toc-h3">4.1 B组核心特征</a>
+<li><a href="#auto-h-108-32e9e7" class="toc-h3">4.2 B组按派系分析</a>
+<li><a href="#auto-h-206-b4f3c0" class="toc-h4">B1 盈科系（钱明飞）— 12.34%，最大的对赌债权人群体</a>
+<li><a href="#auto-h-207-8d7178" class="toc-h4">B2 赛富系（阎焱）— 2.02%</a>
+<li><a href="#auto-h-208-f954fb" class="toc-h4">B3 安徽金通 — 4.16%  🔶 待VIP核实</a>
+<li><a href="#auto-h-209-4cc77d" class="toc-h4">B4 兴证投资 — 0.60%  ✅ 已确认</a>
+<li><a href="#auto-h-210-12b66c" class="toc-h4">B5 晋江创合（启诚控股/黄维斯）— 1.09%  ⚠️ 天眼查核实GP=厦门启诚之星</a>
+<li><a href="#auto-h-211-80914c" class="toc-h4">B6 其他分散PE — 13家 13.92%  🔶 全部待VIP核实，以下为原始版穿透数据</a>
+<li><a href="#auto-h-109-92bb27" class="toc-h3">4.3 B组对天保的战略意义</a>
+</ul>
+</ul>
+<li><a href="#auto-h-5-0bd3e0" class="toc-h2">五、收购方案设计（按新分类重组）</a>
+<ul class="toc-sub">
+<li><a href="#auto-h-110-29f1f0" class="toc-h3">5.1 总体路径</a>
+<li><a href="#auto-h-111-75e0b9" class="toc-h3">5.2 第一阶段：收购A组（当前任务，6-12个月）</a>
+<li><a href="#auto-h-112-eee036" class="toc-h3">5.3 第二阶段：应对B组变化（12-24个月）</a>
+<li><a href="#auto-h-113-4bd3aa" class="toc-h3">5.4 第三阶段：谋求控股（24-36个月）</a>
+<li><a href="#auto-h-114-25f15d" class="toc-h3">5.5 各情景下的预算与路径汇总</a>
+</ul>
+</ul>
+<li><a href="#auto-h-6-216732" class="toc-h2">六、谈判策略与价格梯度</a>
+<ul class="toc-sub">
+<li><a href="#auto-h-115-502004" class="toc-h3">6.1 A组谈判要点</a>
+<li><a href="#auto-h-116-c6ba75" class="toc-h3">6.2 价格底线测算</a>
+<li><a href="#auto-h-117-f9b481" class="toc-h3">6.3 对B组的&quot;期权式&quot;策略</a>
+<li><a href="#auto-h-118-762cfc" class="toc-h3">6.4 B组分派系谈判优先级</a>
+</ul>
+</ul>
+<li><a href="#auto-h-7-ee3532" class="toc-h2">七、关键风险与应对</a>
+</ul>
+<li><a href="#auto-h-8-112af9" class="toc-h2">八、下一步行动清单</a>
+</ul>
+</ul>
+</div>
+
+<div class="key-conclusion">
+<h3 class="callout-h">🎯 关键结论</h3>
+<p>核心观点详见正文各章节分析。</p>
+</div>
+<h1>星恒电源股东分类与收购方案分析（按对赌回购状态重组）</h1>
+<p><strong>分析日期</strong>：2026-05-26 | <strong>数据来源</strong>：股东名册(2024-07) + 股权穿透Excel v2(经天眼查多源交叉核实) + 启源纳川协议分析 + 天眼查司法数据
+<strong>核实报告</strong>：参见 <a href="02_%E9%99%84_%E8%82%A1%E4%B8%9C%E7%A9%BF%E9%80%8F%E6%A0%B8%E5%AE%9E%E6%8A%A5%E5%91%8A.md">股东穿透核实报告</a> — 已核实20家，10家A组全部v2正确，14家待VIP核实</p>
+<hr />
+<h2 id="auto-h-1-579fe3">一、股权结构分类汇总（终版，参考启源芯方案格式，根据5.25专题会修订）</h2>
+<div class="ascii-figure ascii-flow"><div class="ascii-figure-title">📋 路径流程图（横向时间线 V15.2.13）</div><div class="ascii-flow-row"><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">1</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">星恒电源股份有限公司（注册资本32,157.51万元，...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">2</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">├── 【当前股权结构】</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">3</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 第一大股东 启源纳川 17.73%</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">4</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   └── 问题股东：被执行22.33亿元...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">5</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── PE机构 35家 47.87%（均含对...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">6</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── A类-上市前必须退出 10家 ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">7</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">天保5亿收购目标</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">8</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │   ├── 兴业系 2家 6.05...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">9</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │   ├── 海通系 3家 2.28...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">10</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │   ├── 浙江国资 2家 3.7...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">11</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │   ├── 粤开系 2家 1.09...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">12</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │   └── 中兵慧明 1家 0.6...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">13</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   └── B类-有对赌但谋求合作上市 2...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">14</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │       ├── 盈科系(钱明飞) 6家...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">15</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │       ├── 赛富系(阎焱) 3家 ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">16</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │       ├── 安徽金通 1家 4.1...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">17</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │       ├── 兴证投资 1家 0.6...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">18</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │       ├── 晋江创合 1家 1.0...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">19</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │       └── 其他分散PE 13家 ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">20</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 战略国资 2家 15.83%</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">21</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 深创投制造业转型升级新材料基金...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">22</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   └── 安徽高新投新材料产业基金 2....</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">23</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 管理层持股平台 1家 6.26%</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">24</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   └── 苏州袍泽 6.26%（冯笑GP...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">25</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 产业/财务投资者 6家 10.25%</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">26</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   └── 成都地奥3.43%/江苏靖联3...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">27</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   └── 自然人 5家 2.06%</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">28</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       └── 周忻0.82%/胡野碧0.58...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">29</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">├── 【5.25专题会结论】</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">30</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 会议认为：项目契合集团布局新能源赛道+...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">31</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 星恒管理层反馈：当前阶段控股并表实施难...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">32</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">港股IPO申报</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">33</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 关键判断：上市前强行推动控股并表=面临...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">34</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   └── 策略定位：以13.73%老股转让为当前...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">35</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">├── 【本次收购方案：5亿收购13.73%老股】</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">36</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 收购对象：A类10家必须退出的PE（对...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">37</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 收购方式：分批协议收购</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">38</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 第1批 海通系3家+中兵慧明1...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">39</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 第2批 兴业系2家 6.05%...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">40</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   └── 第3批 浙江国资2家+粤开系2...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">41</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">推动成交）</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">42</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 收购价格：5亿（对应约12.1元/股，...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">43</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   └── 收购后：天保持股13.73%，清除IP...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">44</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">├── 【方案风险分析（一）：13.73%老股收购的核...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">45</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 劣势1 少数股权无控制权：13.73%...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">46</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 劣势2 上市退出估值问题：5亿资金对应...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">47</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 劣势3 上市失败即本金损失：IPO失败...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">48</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 劣势4 战略协同无制度保障：无法决定产...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">49</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 劣势5 A组个别股东反悔风险：虽已按成...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">50</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   └── 劣势6 启源纳川问题不解决仍拖累IPO...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">51</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">├── 【方案风险分析（二）：产能落地配套方案的收益与问题】</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">52</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 收益：</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">53</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 经济贡献：10GWh产能落地天津</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">54</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">年产值约30亿+、年税收2-3亿、就业1500-2000人</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">55</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 招商政策：可向管委会争取购地优...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">56</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 项目升维：产能落地+股权收购=...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">57</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   └── 谈判筹码：以产能落地作为招商引...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">58</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 问题与风险（产能落地维度）：</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">59</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 问题1 前置协议可达成但落地存...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">60</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 问题2 出资结构已明确但需落实...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">61</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 问题3 产能利用率【已核实，数...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">62</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │   ├── 产能利用率走势：202...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">63</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">2023年26.9%(2.60/9.66，低谷)</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">64</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">2024年49.3%(4.77/9.66，恢复)</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">65</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">2025年65.8%(6.03/9.16)</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">66</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">2026Q1 63.2%(年化，Q1季节性偏低)</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">67</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │   ├── 营收走势（万元）：20...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">68</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">2023年23.84亿(-34%)</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">69</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">2024年29.49亿(+24%)</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">70</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">2025年36.36亿(+23%)，已恢复至2022年水平</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">71</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │   ├── 毛利率走势：2022年...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">72</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">2023年2.4%(低谷)</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">73</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">2024年17.6%</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">74</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">2025年13.6%</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">75</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">2026Q1 16.3%，波动大、整体偏低</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">76</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │   ├── 净利润率：2025年仅...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">77</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │   ├── 闲置产能风险：金砖电池...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">78</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │   ├── 下游需求趋势：2024...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">79</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │   └── 关键判断：产能利用率虽...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">80</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 问题4 IPO失败则产能逻辑动...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">81</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   └── 问题5 电芯技术迭代</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">82</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">产能维持周期风险（详见下方技术迭代分析）</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">83</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   └── 问题与风险（PACK厂 vs 电芯厂 ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">84</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 背景：产能落地分两个合资法人实...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">85</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 结构风险：PACK厂是电芯厂的...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">86</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 风险A 供应链议价权不对等：电...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">87</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 风险B 经营决策受制于人：PA...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">88</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 风险C 利益冲突时天保处于弱势...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">89</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 风险D 退出机制不对称：若合作...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">90</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       └── 化解思路：(1)在JV协议（J...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">91</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">├── 【方案风险分析（三）：电芯技术迭代周期与产能维...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">92</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 核心问题：10GWh产线投资的实际有效...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">93</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 行业数据：</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">94</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 比亚迪电池设备折旧：2023年...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">95</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 储能电芯型号生命周期：280A...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">96</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">314Ah(2024-2025)</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">97</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">500Ah+(2025+)</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">98</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 两轮车电芯技术迭代：**2-3...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">99</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   └── 行业通用设备折旧：7-10年（...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">100</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 星恒技术路线现状：</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">101</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 历史：单晶锰酸锂圆柱（2003...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">102</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 当前：&quot;黄金双核&quot;——单晶锰酸...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">103</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 最近大升级：2023年推出LM...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">104</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   └── 技术代际位置：LMFP处于生命...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">105</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 关键威胁：</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">106</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 威胁1 钠离子电池：2024年...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">107</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">LFP/LMFP产线面临淘汰</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">108</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 威胁2 国标升级：新国标对电池...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">109</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">方形切换）</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">110</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 威胁3 固态/半固态电池：中长...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">111</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   └── 威胁4 产线兼容性：若产线设计...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">112</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 产能维持周期判断：</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">113</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 乐观情景（技术线性演进）：LM...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">114</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">有效经济寿命约**7-10年**</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">115</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 基准情景（3-5年技术迭代）：...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">116</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">有效经济寿命约**5-7年**</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">117</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   └── 悲观情景（钠电/固态快速替代）...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">118</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">有效经济寿命仅**3-5年**，需在折旧期内完成回收</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">119</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   └── 对天保产能落地的影响：</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">120</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── (1) 财务模型必须按**保守...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">121</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── (2) 在产能落地协议中要求电...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">122</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── (3) 分期投资策略更关键——...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">123</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       └── (4) 关注星恒研发投入和下一...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">124</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">├── 【上市双路径情景分析：成功 vs 失败】</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">125</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 路径A 港股IPO成功：</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">126</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 对赌处理：A组13.73%对赌...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">127</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 天保收益：13.73%获得港股...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">128</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 产能落地：获得上市平台背书，有...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">129</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 风险A1：港股小市值公司流动性...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">130</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 风险A2：IPO定价若低于天保...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">131</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   └── 策略：上市前完成A组收购锁定低...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">132</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   └── 路径B 港股IPO失败：</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">133</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 对赌恢复：B组25家34.13...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">134</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">启源纳川/陈志江无力回购</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">135</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">34.13%集中退出需求涌现</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">136</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 天保机会：作为唯一有资金有意愿...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">137</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 产能落地：逻辑需重新评估但10...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">138</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 风险B1：估值大幅下修</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">139</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">天保13.73%短期账面浮亏严重</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">140</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 风险B2：产业资本（ATL/宁...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">141</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 风险B3：管理层及核心团队信心...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">142</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 风险B4：启源纳川失去IPO变现预期</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">143</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">债务问题恶化</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">144</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">司法拍卖可能被第三方截胡</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">145</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       └── 策略：上市失败时转为主动出击—...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">146</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">├── 【港股IPO合规关键规则核查（依据HKEX L...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">147</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 核心规则：Rule 8.05(c)——...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">148</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   └── 即：最近一个经审计会计年度的所...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">149</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 场景一 战略合作备忘录（非约束性）：</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">150</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 法律评估：非约束性意向文件，不...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">151</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 披露要求：若涉及重大合作安排（...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">152</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   └── 结论：上市前签署非约束性备忘录</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">153</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">对IPO无实质性影响，可安全推进 ✅</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">154</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 场景二 附上市生效条件的一致行动协议：</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">155</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 法律评估：协议生效条件为IPO...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">156</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── Rule 8.05影响：上市前...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">157</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">不触发&quot;重大转变&quot;</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">158</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">无需重新计算3年营业记录期</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">159</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 披露要求：依据上市规则第11....</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">160</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   └── 结论：附上市生效条件的一致行动协议</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">161</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">对IPO审核无实质性影响，招股书披露即可 ✅</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">162</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   └── 场景三 上市前签署正式一致行动协议（不...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">163</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 法律评估：天保13.73%+袍...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">164</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">触发第一大股东变更</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">165</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">构成Rule 8.05(c)项下的&quot;控制权变更&quot;</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">166</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 后果：依据Rule 8.05及...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">167</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 延迟时间估计：若需重新计算营业记录</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">168</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">延迟12-36个月（非简单的A1更新），严重时可能被视...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">169</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       └── 结论：上市前不得签署正式生效的...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">170</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">化解：一律采用场景二（附上市生效条件）</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">171</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">├── 【综合风险矩阵与化解方案】</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">172</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 🔴 高风险（需在交易前或交易中化解）：</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">173</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 上市失败</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">174</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">13.73%股权贬值，原股东(启源纳川已违约)无能力签回售权</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">175</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">176</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">化解：(1) 上市失败后立即启动B组低价增持策略，将持...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">177</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │        (2) 联合深创投等...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">178</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │        (3) 产能落地作为...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">179</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── PACK厂对电芯厂的单向依赖</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">180</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">&quot;名为控股实为代工&quot;（电芯51:49星恒控/PACK ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">181</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">化解：(1) JVA中嵌入长期电芯供应协议——约定量（...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">182</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │        (2) 电芯厂JVA...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">183</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │        (3) 预留备用电芯...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">184</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │        (4) PACK厂J...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">185</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │        (5) 分阶段建设：...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">186</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 电芯技术迭代</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">187</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">10GWh产线5年内被淘汰（保守折旧3-5年，基准5-...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">188</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">化解：(1) 财务模型必须按保守5年折旧计算IRR，不...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">189</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │        (2) 产能落地协议...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">190</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │        (3) 分期投资——...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">191</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │        (4) 若钠电在20...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">192</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">LMFP产线可能提前淘汰，需在JVA中嵌入退出条款</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">193</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   └── 启源纳川冻结不解</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">194</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">IPO无限拖延</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">195</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">196</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">化解：(1) 联合B组PE+深创投共同向法院申请强制拍...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">197</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │            (2) 若拍卖启动，...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">198</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── 🟠 中风险（可在交易后逐步化解）：</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">199</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 13.73%无控制权</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">200</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">战略意图无法落地</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">201</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">化解：(1) 争取至少1席董事会观察员(非表决权，但可...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">202</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │        (2) 通过产能落地...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">203</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │        (3) 上市后通过二...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">204</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   ├── 产能落地资金与回报机制待落实（...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">205</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">数据基础：FY2025产能利用率65.8%+营收36....</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">206</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">化解：(1) 天保以土地+代建厂房出资(5亿)，降低现...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">207</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │        (2) 星恒以设备+...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">208</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │        (3) 分阶段建设：...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">209</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   │        (4) 财务模型中产...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">210</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │   └── 章程优先购买权</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">211</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">收购受阻</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">212</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">化解：(1) P0立即核实章程条款</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">213</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │            (2) 股份公司原则...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">214</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   │            (3) 若章程有障碍...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">215</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   └── 🟡 低风险（持续监控管理即可）：</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">216</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 会议未明确责任人与时间节点</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">217</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">推进可能缺乏紧迫感</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">218</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">化解：内部建立专项工作组+周报机制，每项行动明确责任人...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">219</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 信息数据收集不足</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">220</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">论证不充分</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">221</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">决策依据薄弱（会议明确要求&quot;加大信息数据收集&quot;）</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">222</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">化解：Phase 1首先系统化收集关键缺失数据（审计报...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">223</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 签袍泽正式一致行动触发Rule...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">224</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">IPO延期12-36月</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">225</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">化解：Rule 8.05已核实，上市前仅签附生效条件协...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">226</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── A组个别股东签约前反悔抬价</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">227</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">化解：先签2-3家最低价者锁定价锚(海通系+中兵慧明最...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">228</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 产能落地政府支持不及预期</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">229</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">化解：以其他城市竞争产能落地作为谈判筹码，保留备选城市方案</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">230</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── PE股东联合抬价</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">231</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">化解：利用各PE退出紧迫度差异(海通已仲裁最急</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">232</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">兴业银行合规次之</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">233</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">国资流程长)，分批分化谈判</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">234</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       ├── 总代理模式不可行</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">235</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">化解：会议已明确仅作附加参考，不纳入主方案决策依据</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">236</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│       └── 产业资本竞拍启源纳川</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">237</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">化解：分批秘密谈判A组，不暴露天保全盘收购意图；若拍卖...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">238</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">└── 【分阶段行动计划（含风险化解节点）】</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">239</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">├── 第一阶段 方案论证与规则确认（1-2月）</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">240</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── P0：系统化收集关键缺失数据——其中产...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">241</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── P0：基于数据基础，充分论证13.73...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">242</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── P0：核实星恒章程——优先购买权条款 ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">243</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── P0：上市双路径情景的财务测算（成功=...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">244</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── P0：产能落地经济性测算（一期5GWh...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">245</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── P0：电芯技术迭代周期深度评估——委托...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">246</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   └── P0：聘请香港律师出具Rule 8.0...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">247</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">├── 第二阶段 关键方初步接触（2-4月）</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">248</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── P0：与A组海通系3家(已仲裁)+中兵...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">249</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── P1：与A组兴业系2家(银行理财子)+...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">250</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── P1：与苏州袍泽/冯笑建立沟通，探讨&quot;...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">251</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── P1：沟通管委会，明确产能落地招商引资...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">252</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   └── P1：启动PACK厂供应链风险评估——...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">253</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">├── 第三阶段 交易框架落地（4-8月）</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">254</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── P1：启动中介机构选聘（财务顾问+香港...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">255</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── P1：完成A组第1批2-3家签约（优先...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">256</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── P1：起草A组收购协议模板（明确价格+...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">257</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   ├── P2：与B组核心PE签优先受让权框架协...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">258</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│   └── P2：与B组盈科系钱明飞初步沟通，了解...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">259</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">└── 第四阶段 收官与长期布局（8-12月）</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">260</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">├── P2：完成A组全部10家协议签署+交割，天保持...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">261</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">├── P2：签署袍泽&quot;附上市生效条件的一致行动协议&quot;...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">262</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">├── P2：签署产能落地框架协议（天保以土地/代建出...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">263</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">├── P2：联合B组核心PE+深创投，推动启源纳川股...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">264</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">├── P2：持续监控启源纳川司法拍卖，准备竞拍方案（...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">265</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">└── P2：建立上市失败应急预案（含B组批量收购方案...</div></div></div></div></div>
+<hr />
+<h3 id="auto-h-101-9c06bf">数据质量标注说明</h3>
+<p>| 标注 | 含义 | 数量 |
+|------|------|------|
+| ✅ | 已通过天眼查/企查查核实，置信度高 | 21家 |
+| 🔶 | 采用原始版Excel穿透数据（推测来自早期天眼查VIP查询），待VIP核实 | 14家 |
+| ⚠️ | 存在争议或需要特别关注 | 2家（晋江创合、珠海慧明二审中） |</p>
+<hr />
+<h2 id="auto-h-2-846ecf">二、核心分类逻辑：两类PE的本质区别</h2>
+<h3 id="auto-h-102-de7666">2.1 分类框架</h3>
+<div class="ascii-figure ascii-flow"><div class="ascii-figure-title">📋 路径流程图（横向时间线 V15.2.13）</div><div class="ascii-flow-row"><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">1</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│        星恒电源 50家股东（100%）  ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">2</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">▼                          ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">3</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│ A组 13.73%│               ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">4</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│ 必须退出  │                  ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">5</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">已触发回购条款                    ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">6</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">启源纳川/陈志江                   ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">7</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">对赌终止                       ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">8</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">无力回购</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">9</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">必须找                      上市失败</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">10</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">恢复对赌</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">11</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">第三方接盘</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">12</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">启源纳川债务再爆炸</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">13</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">▼                          ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">14</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">天保以合理价格                    ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">15</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">接盘</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">16</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">清除IPO障碍                  ① ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">17</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">② 同步准备收购（若失败则接盘）</div></div></div></div></div>
+<h3 id="auto-h-103-cd395f">2.2 A组 vs B组的关键差异</h3>
+<p>| 维度 | A组 必须退出（10家 13.73%） | B组 谋求合作上市（25家 34.13%） |
+|------|--------------------------|------------------------------|
+| <strong>对赌状态</strong> | 已触发回购，启源纳川违约，必须找第三方接盘 | 对赌暂缓/和解，上市成功则终止 |
+| <strong>退出紧迫度</strong> | 🔴 极高——IPO前必须清理，否则构成上市障碍 | 🟡 中——当前配合上市，但IPO失败则变为急迫 |
+| <strong>谈判地位</strong> | 天保占优——他们是&quot;被套住&quot;的一方，需要天保接盘 | 相对均衡——他们有等待期权（赌上市） |
+| <strong>价格预期</strong> | 可争取折价（成本价8折，约12.3元/股） | 成本价附近或小幅溢价（15.4-17.4元/股） |
+| <strong>总投入成本</strong> | 约3.36亿元（按各自成本价×持股数） | 约15.5亿元（按各自成本价×持股数） |
+| <strong>天保策略</strong> | <strong>立即收购</strong>，5亿预算覆盖全部10家 | <strong>双轨并行</strong>：推动上市 + 预备收购 |</p>
+<hr />
+<h2 id="auto-h-3-98c99f">三、A组「必须退出」详细分析（天保直接收购对象）</h2>
+<h3 id="auto-h-104-643a51">3.1 A组10家汇总</h3>
+<p>| 序号 | 股东名称 | 持股比例 | 成本(元/股) | 总投资(万元) | 派系 | 现状 |
+|------|---------|---------|------------|-------------|------|------|
+| 1 | 江苏疌泉绿色产业 | 4.03% | 15.43 | 20,000 | 兴业系 | 退出 |
+| 2 | 福州兴睿永瀛 | 2.02% | 15.43 | 10,000 | 兴业系 | 退出 |
+| 3 | 辽宁海通新能源 | 1.41% | 15.43 | 7,000 | 海通系 | 退出(已仲裁) |
+| 4 | 海通创新证券 | 0.60% | 15.43 | 3,000 | 海通系 | 退出 |
+| 5 | 湖州赟通 | 0.26% | 15.43 | 1,300 | 海通系 | 退出(已仲裁) |
+| 6 | 嘉兴沨石 | 2.22% | 15.43 | 11,000 | 浙江国资 | 退出 |
+| 7 | 嘉兴沨行景纬 | 1.50% | 15.43 | 7,465 | 浙江国资 | 可能退出 |
+| 8 | 惠州联讯德威 | 0.68% | 16.00 | 3,500 | 粤开系 | 退出 |
+| 9 | 合肥粤开兴泰 | 0.41% | 16.00 | 2,100 | 粤开系 | 可能退出 |
+| 10 | 珠海慧明十方 | 0.60% | 15.43 | 3,000 | 中兵慧明 | 退出(二审中) |
+| <strong>合计</strong> | <strong>10家</strong> | <strong>13.73%</strong> | <strong>加权15.48</strong> | <strong>68,365</strong> | — | — |</p>
+<h3 id="auto-h-105-5535f6">3.2 A组按派系分析</h3>
+<h4 id="auto-h-201-842799">A1 兴业系（6.05%）— 规模最大，银行理财子合规压力</h4>
+<p>| 维度 | 分析 |
+|------|------|
+| <strong>规模</strong> | 2家合计6.05%，A组中最大单一派系 |
+| <strong>LP背景</strong> | 兴业银行理财子，有穿透式监管和产品到期退出刚性约束 |
+| <strong>急迫度</strong> | 🔴 极高——银行理财子不能无限期持有未上市股权，监管整改压力大 |
+| <strong>谈判筹码</strong> | 银行体系最怕&quot;不良资产&quot;定性，折价出清意愿可能存在 |
+| <strong>预计对价</strong> | 成本3.0亿，争取8折 → <strong>2.4-2.7亿</strong> |</p>
+<h4 id="auto-h-202-e16208">A2 海通系（2.28%）— 已有仲裁，关系破裂最彻底</h4>
+<p>| 维度 | 分析 |
+|------|------|
+| <strong>规模</strong> | 3家合计2.28% |
+| <strong>现状</strong> | 辽宁海通+湖州赟通已申请仲裁（上海金融法院2026），与启源纳川关系已破裂 |
+| <strong>急迫度</strong> | 🔴 极高——仲裁说明沟通渠道已关闭，只能通过司法或第三方接盘解决 |
+| <strong>预计对价</strong> | 成本1.13亿，争取8折 → <strong>0.9-1.0亿</strong> |</p>
+<h4 id="auto-h-203-38b340">A3 浙江国资系（3.72%）— 沨石+沨行景纬</h4>
+<p>| 维度 | 分析 |
+|------|------|
+| <strong>规模</strong> | 2家合计3.72%，嘉兴沨石已确认退出，沨行景纬尚在观望 |
+| <strong>急迫度</strong> | 🟠 中高——沨石明确退出，沨行景纬可能跟进 |
+| <strong>预计对价</strong> | 成本1.85亿，争取9折 → <strong>1.6-1.8亿</strong> |</p>
+<h4 id="auto-h-204-62826c">A4 粤开系（1.09%）— 券商直投退出</h4>
+<p>| 维度 | 分析 |
+|------|------|
+| <strong>规模</strong> | 2家合计1.09%，成本16.00元/股（略高于其他PE） |
+| <strong>急迫度</strong> | 🟠 中高——惠州联讯已确认退出 |
+| <strong>预计对价</strong> | 成本0.56亿，争取9折 → <strong>0.5-0.55亿</strong> |</p>
+<h4 id="auto-h-205-4fd6c6">A5 中兵慧明系（0.60%）— 二审中，最急迫</h4>
+<p>| 维度 | 分析 |
+|------|------|
+| <strong>规模</strong> | 1家0.60% |
+| <strong>背景</strong> | GP中兵慧明→50%广发证券+50%中国兵器工业集团 |
+| <strong>急迫度</strong> | 🔴 极高——二审中，败诉风险推动快速和解意愿 |
+| <strong>预计对价</strong> | 成本0.30亿，争取7折 → <strong>0.2-0.25亿</strong> |</p>
+<h3 id="auto-h-106-d1ee52">3.3 A组收购总预算</h3>
+<p>| 方案 | 收购范围 | 预计对价 | 说明 |
+|------|---------|---------|------|
+| <strong>完整方案</strong> | 全部10家（13.73%） | <strong>5.6-6.3亿</strong> | 按加权成本8-9折 |
+| <strong>压缩方案</strong> | 前7家（11.73%，排除沨行景纬+合肥粤开+惠州联讯部分） | <strong>4.8-5.2亿</strong> | 匹配5亿预算 |</p>
+<blockquote>
+<p><strong>关键匹配</strong>：天保5亿收购13.73%的计划，恰好覆盖A组全部10家。对价5亿对应成本价7.3折，有一定谈判可行性。</p>
+</blockquote>
+<hr />
+<h2 id="auto-h-4-dbaf09">四、B组「有对赌但谋求合作上市」详细分析</h2>
+<h3 id="auto-h-107-be8538">4.1 B组核心特征</h3>
+<p>B组25家PE（34.13%）的对赌回购协议<strong>当前处于&quot;暂缓&quot;状态</strong>——他们选择与星恒合作推动上市，而非立即要求回购。</p>
+<div class="ascii-figure ascii-flow"><div class="ascii-figure-title">📋 路径流程图（横向时间线 V15.2.13）</div><div class="ascii-flow-row"><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">1</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">B组的对赌状态转换逻辑：</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">2</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">当前状态：对赌「暂缓」，合作上市</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">3</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">├── 上市成功</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">4</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">对赌终止 ✅（PE通过IPO退出，皆大欢喜）</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">5</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">└── 上市失败</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">6</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">对赌恢复 ⚡</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">7</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">└── 启源纳川/陈志江仍无力回购</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">8</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">└── B组转为A组状态（必须找第三方接盘）</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">9</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">└── 34.13%集中涌出</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">10</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">收购窗口打开但竞争加剧</div></div></div></div></div>
+<h3 id="auto-h-108-32e9e7">4.2 B组按派系分析</h3>
+<h4 id="auto-h-206-b4f3c0">B1 盈科系（钱明飞）— 12.34%，最大的对赌债权人群体</h4>
+<p>| 股东 | 持股% | 成本 | 投入(万元) | 状态 |
+|------|------|------|-----------|------|
+| 盐城融盈 | 4.03% | 15.43 | 20,000 | 沟通和解 |
+| 盈科价值 | 3.91% | 17.42 | 21,833 | 沟通和解(已诉讼⚡) |
+| 盈科吉运 | 2.13% | 17.32 | 11,833 | 沟通和解(已诉讼⚡) |
+| 上海嘉俐 | 1.80% | 17.32 | 10,000 | 沟通和解 |
+| 盈科卓优 | 0.39% | 15.43 | 1,920 | 沟通和解 |
+| 平潭锦盛 | 0.09% | 15.43 | 440 | 沟通和解 |
+| <strong>合计</strong> | <strong>12.34%</strong> | <strong>16.49</strong> | <strong>66,026</strong> | — |</p>
+<p>| 维度 | 分析 |
+|------|------|
+| <strong>关键信号</strong> | 盈科价值+盈科吉运已起诉启源纳川（合计3.9亿诉求），说明耐心消耗中 |
+| <strong>策略</strong> | 盈科系是B组中最可能&quot;转向退出&quot;的派系——已有2家诉讼，其他4家可能跟进 |
+| <strong>天保对策</strong> | 与盈科系建立直接沟通，了解其真实底线；若上市进度不理想，优先锁定盈科系全部6家 |</p>
+<h4 id="auto-h-207-8d7178">B2 赛富系（阎焱）— 2.02%</h4>
+<p>| 股东 | 持股% | 成本 | 投入(万元) |
+|------|------|------|-----------|
+| 黄山赛富 | 0.81% | 15.43 | 4,000 |
+| 赛富金钻 | 0.60% | 15.43 | 3,000 |
+| 赛富衡准 | 0.60% | 15.43 | 3,000 |
+| <strong>合计</strong> | <strong>2.02%</strong> | <strong>15.43</strong> | <strong>10,000</strong> |</p>
+<p>赛富（阎焱）是知名PE，讲究IRR回报。目前选择合作上市说明其对IPO前景有信心，短期内不会主动退出。</p>
+<h4 id="auto-h-208-f954fb">B3 安徽金通 — 4.16%  🔶 待VIP核实</h4>
+<p>| 维度 | 分析 |
+|------|------|
+| <strong>穿透（原始版）</strong> | GP安徽金通智汇1% → LP安徽省三重一创37.12%(安徽省国资委)，省级国资新能源产业基金 |
+| <strong>投入</strong> | 8,000万元，成本15.43元/股 |
+| <strong>与国轩高科关联</strong> | 名称/股东含&quot;合肥国轩电池材料&quot;，可能与国轩高科体系关联 |
+| <strong>策略</strong> | 国资属性→倾向于&quot;配合上市&quot;，强制回购意愿弱 |</p>
+<h4 id="auto-h-209-4cc77d">B4 兴证投资 — 0.60%  ✅ 已确认</h4>
+<p>| 维度 | 分析 |
+|------|------|
+| <strong>身份确认</strong> | 兴业证券全资子公司（兴业证券高管任命公告：兴证投资原执行董事兼总裁刘宇调任兴证资管董事长） |
+| <strong>投入</strong> | 3,000万元，成本15.43元/股 |
+| <strong>策略</strong> | 券商直投，配合IPO退出 |</p>
+<h4 id="auto-h-210-12b66c">B5 晋江创合（启诚控股/黄维斯）— 1.09%  ⚠️ 天眼查核实GP=厦门启诚之星</h4>
+<p>| 维度 | 分析 |
+|------|------|
+| <strong>天眼查实际</strong> | GP厦门市启诚之星投资管理合伙企业 → 关联黄维斯/福建启诚控股 |
+| <strong>排除项</strong> | ❌ 非七匹狼系(周永伟/周少雄)，❌ 非升华系(夏士林) |
+| <strong>投入</strong> | 5,400万元，成本15.43元/股 |
+| <strong>待核实</strong> | 启诚控股上层穿透（黄维斯→?），建议天眼查VIP进一步穿透 |</p>
+<h4 id="auto-h-211-80914c">B6 其他分散PE — 13家 13.92%  🔶 全部待VIP核实，以下为原始版穿透数据</h4>
+<p>| 股东 | 持股% | 成本 | 投入(万元) | 穿透(原始版) | 体系 | 备注 |
+|------|------|------|-----------|------------|------|------|
+| 青岛海丝稳健 | 3.43% | 15.43 | 17,000 | GP青岛城投私募0.1%→LP青岛城投创投99.9% | <strong>青岛国资</strong> | B6中最大单一股东 |
+| 宁波余章 | 2.25% | 17.42 | 12,582 | GP长沙启源智能→LP厦门天泽壹号55.38%(→林晓春54.83%) | <strong>启源资本/赵明</strong> | 成本17.42较高 |
+| 宁波长江奇湾 | 2.02% | 15.43 | 10,000 | GP宁波长江奇湾→LP长江成长资本36.76%(长江证券)+国华人寿24.15% | <strong>长江证券</strong> | 已有诉讼⚡ |
+| 泉州云柏 | 2.02% | 15.43 | 10,000 | GP陈海晖2%→LP陈志波33%+陈忠富30% | <strong>民营(福建泉州)</strong> | 家族企业 |
+| 宁波丰鼎优泰 | 1.63% | 15.43 | 8,100 | GP博信天津1%→LP上海嘉贯添今35.48%(→财政部35.54%)+苏州高新金鹰32.26%+大地保险16.13% | <strong>博信基金/彭越</strong> | 混合所有制(含国资) |
+| 上海能骏 | 0.60% | 15.43 | 3,000 | GP刘芷瑞0.67%→LP上海新辽投资68.43%(→李光华43.78%) | <strong>辽宁大辽河集团</strong> | 民营 |
+| 无锡云和正奇 | 0.40% | 15.43 | 2,000 | GP无锡云和世锦1.25%→LP杭州云禾毅仁33.98%+无锡浦发25%(国资)+无锡高新22.5% | <strong>云和资本/赵云</strong> | 混合所有制(含国资) |
+| 金华普华 | 0.40% | 15.43 | 2,000 | GP浙江普华天勤1%→LP宁波普华天跖42%+金华转型基金20%(浙江省国资) | <strong>普华资本/沈琴华</strong> | 混合所有制(含国资) |
+| 宁波景轩 | 0.39% | 16.00 | 2,000 | GP成都德源格物→LP文轩鼎盛70.03%(文轩资本→<strong>四川省国资委</strong>) | <strong>文轩资本/四川国资</strong> | 国资 |
+| 宁波福锡 | 0.34% | 15.43 | 1,700 | GP西藏国创投资1%→LP王贺永70%+张文颖17% | <strong>启源资本(民营)</strong> | 民营 |
+| 张敏峰 | 0.20% | 15.43 | 1,000 | 自然人直接持股 | <strong>自然人</strong> | — |
+| 共青城鸿天 | 0.13% | 15.43 | 650 | GP刘国超(执行事务合伙人) | <strong>民营</strong> | 共青城注册 |
+| 共青城名华 | 0.12% | 15.43 | 600 | GP戴君棉(执行事务合伙人) | <strong>民营</strong> | 共青城注册 |
+| <strong>合计</strong> | <strong>13.92%</strong> | — | <strong>约72,632</strong> | — | — | — |</p>
+<h3 id="auto-h-109-92bb27">4.3 B组对天保的战略意义</h3>
+<p>| 情景 | B组行为 | 天保策略 |
+|------|--------|---------|
+| <strong>上市顺利推进</strong> | B组保持合作，对赌持续暂缓 | 天保无需立即收购B组，但需关注盈科系2家诉讼进展 |
+| <strong>上市延迟6-12月</strong> | B组耐心消耗，部分转向退出 | 天保可选择性收购转向退出的B组PE，折价扩股 |
+| <strong>上市失败</strong> | B组全部恢复对赌 → 34.13%转为退出 | 天保面临&quot;抄底大机会&quot;但也面临其他买家的竞争 |</p>
+<hr />
+<h2 id="auto-h-5-0bd3e0">五、收购方案设计（按新分类重组）</h2>
+<h3 id="auto-h-110-29f1f0">5.1 总体路径</h3>
+<div class="ascii-figure ascii-flow"><div class="ascii-figure-title">📋 路径流程图（横向时间线 V15.2.13）</div><div class="ascii-flow-row"><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">1</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">┌── 当前 ──┐        ┌── 第一阶段 ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">2</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│  天保 0%  │        │  扫清IPO...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">3</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">│           │        │  目标:...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">4</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">▼                      ▼   ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">5</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">收购对象：           A组10家(13.73...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">6</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">对价：               5.0-6.0亿 ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">7</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">时间：               6-12个月   ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">8</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">关键动作：           协议收购       ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">9</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">协同动作：           —          ...</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">10</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">天保持股演进：       0%</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">11</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">~15%              ~15%</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">12</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">25-30%            25-30%</div></div></div><div class="ascii-flow-arrow">→</div><div class="ascii-flow-node"><div class="ascii-flow-dot"><span class="ascii-flow-num">13</span></div><div class="ascii-flow-card"><div class="ascii-flow-name">50%+</div></div></div></div></div>
+<h3 id="auto-h-111-75e0b9">5.2 第一阶段：收购A组（当前任务，6-12个月）</h3>
+<p><strong>目标</strong>：以5亿预算收购A组全部10家（13.73%），清除IPO上市障碍。</p>
+<p>| 收购顺序 | 目标 | 持股% | 预计对价(亿) | 策略 |
+|---------|------|------|-------------|------|
+| <strong>第1批</strong> | 海通系3家 + 中兵慧明1家 | 2.88% | 1.1-1.3 | 已有仲裁/二审，最急迫，争取最低折扣 |
+| <strong>第2批</strong> | 兴业系2家 | 6.05% | 2.4-2.7 | A组最大派系，银行理财子合规压力 |
+| <strong>第3批</strong> | 浙江国资系2家 + 粤开系2家 | 4.81% | 2.1-2.4 | 部分&quot;可能退出&quot;，需推动确认 |</p>
+<p><strong>第一阶段成果</strong>：</p>
+<ul>
+<li>天保持股13.73%，投入5.0-6.0亿（可控制在5亿内通过价格谈判）</li>
+<li>清除IPO最大障碍：10家必须退出的PE全部解决</li>
+<li>获得与B组、C组谈判的主动权（&quot;我们已经解决了最难的部分&quot;）</li>
+</ul>
+<h3 id="auto-h-112-eee036">5.3 第二阶段：应对B组变化（12-24个月）</h3>
+<p>B组的处理取决于上市进展：</p>
+<p><strong>情景1：上市顺利推进（基准情景）</strong></p>
+<ul>
+<li>B组25家保持合作，对赌继续暂缓</li>
+<li>天保无需额外投入，持股13.73% + 袍泽一致行动(6.26%) = 实质影响20%</li>
+<li>可选择性收购B组中转向退出的个别PE（如盈科系诉讼2家）</li>
+</ul>
+<p><strong>情景2：上市延迟/B组耐心消耗</strong></p>
+<ul>
+<li>B组部分PE转向退出，天保以折价收购</li>
+<li>每收购1%约需0.35-0.40亿（按成本价8折）</li>
+<li>若收购B组中10个百分点 → 额外投入3.5-4.0亿</li>
+<li>天保持股 → 13.73% + 10% + 袍泽6.26% = 实质影响30%</li>
+</ul>
+<p><strong>情景3：上市失败（最差情景，但对天保可能是最大机会）</strong></p>
+<ul>
+<li>B组34.13%全部恢复对赌 → 市场上突然出现大量退出需求</li>
+<li>天保可以&quot;白衣骑士&quot;姿态入场，以极低折扣收购</li>
+<li>但需警惕其他产业资本（ATL/宁德时代）的竞争</li>
+</ul>
+<h3 id="auto-h-113-4bd3aa">5.4 第三阶段：谋求控股（24-36个月）</h3>
+<p>在A组+B组控制后，天保的核心持股预计达到25-30%。
+通过以下组合拳实现50%+：</p>
+<p>| 方式 | 具体操作 | 增加持股 |
+|------|---------|---------|
+| 袍泽一致行动 | 与冯笑团队签署一致行动人协议 | +6.26% |
+| 深创投战略合作 | 董事会席位+IPO推进利益绑定 | +12.92% |
+| 启源纳川处理 | 债务重组或司法拍卖 | +17.73% |
+| <strong>理论最大可控</strong> | — | <strong>~62%</strong> |</p>
+<h3 id="auto-h-114-25f15d">5.5 各情景下的预算与路径汇总</h3>
+<p>| 情景 | 天保持股 | 总投入 | 一致行动后可控 | 并表可行性 |
+|------|---------|--------|--------------|-----------|
+| <strong>最小方案</strong> | A组13.73% | 5.0亿 | 20.0%（+袍泽） | ❌ 不够 |
+| <strong>基准方案</strong> | A组+B组部分≈25% | 8-10亿 | 31.3%（+袍泽） | ⚠️ 相对控股 |
+| <strong>进取方案</strong> | A组+B组大部+启源纳川≈45% | 15-20亿 | 51.3%（+袍泽） | ✅ 绝对控股 |
+| <strong>最优方案</strong> | A组+B组+袍泽一致行动+深创投合作 | 8-10亿 | 50%+ | ✅ 合并并表 |</p>
+<hr />
+<h2 id="auto-h-6-216732">六、谈判策略与价格梯度</h2>
+<h3 id="auto-h-115-502004">6.1 A组谈判要点</h3>
+<p>| 派系 | 谈判切入点 | 价格目标 | 风险提示 |
+|------|-----------|---------|---------|
+| 兴业系 | 银行理财子监管整改压力、产品到期时间线 | 成本8-9折 | 不要透露天保&quot;控股并表&quot;意图，避免对方抬价 |
+| 海通系 | 仲裁已在进行，强调&quot;庭外和解比仲裁执行更快&quot; | 成本7-8折 | 仲裁结果可能影响其他PE要价 |
+| 浙江国资 | 国资退出流程的合规性需求，提供&quot;干净退出&quot;方案 | 成本9折 | 国资转让需评估备案，流程长 |
+| 粤开系 | 券商直投的回报周期压力 | 成本9折 | — |
+| 中兵慧明 | 二审败诉后执行难，庭外和解更优 | 成本7折 | 二审结果未定，时间窗口可能很紧 |</p>
+<h3 id="auto-h-116-c6ba75">6.2 价格底线测算</h3>
+<div class="chart-wrapper"><div class="chart-legend-auto" data-floating="0" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:14px 0 14px 0;padding:10px 14px;background:#fffbeb;border:2px solid #d69e2e;border-radius:8px;font-size:13px;color:#1a202c;max-width:100%;"><strong style="color:#744210;">图例：</strong><span class="lg-item"><span class="lg-dot" style="background:#dc2626"></span>晶能光电</span> <span class="lg-item"><span class="lg-dot" style="background:#2563eb"></span>三安光电</span> <span class="lg-item"><span class="lg-dot" style="background:#059669"></span>兆驰股份</span></div><figure class="chart-figure chart-heatmap "><svg viewBox="0 0 940 940" class="heatmap-svg" width="100%" height="auto"><text x="103.40" y="161.68" text-anchor="end" font-size="14.1px" fill="#1a365d" font-weight="700">中低端</text><text x="103.40" y="355.32" text-anchor="end" font-size="14.1px" fill="#1a365d" font-weight="700">中端</text><text x="103.40" y="547.08" text-anchor="end" font-size="14.1px" fill="#1a365d" font-weight="700">高端</text><text x="103.40" y="740.72" text-anchor="end" font-size="14.1px" fill="#1a365d" font-weight="700">定制化</text><text x="189.88" y="47.00" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">衬底材料</text><text x="344.04" y="47.00" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">外延片</text><text x="498.20" y="47.00" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">芯片</text><text x="652.36" y="47.00" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">封装</text><text x="806.52" y="47.00" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">模组</text><rect x="112.80" y="56.40" width="154.16" height="192.70" fill="rgb(214,158,46)" stroke="#fff" stroke-width="0.3"/><text x="189.88" y="161.68" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">12</text><rect x="266.96" y="56.40" width="154.16" height="192.70" fill="rgb(203,152,48)" stroke="#fff" stroke-width="0.3"/><text x="344.04" y="161.68" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">15</text><rect x="421.12" y="56.40" width="154.16" height="192.70" fill="rgb(178,138,54)" stroke="#fff" stroke-width="0.3"/><text x="498.20" y="161.68" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">22</text><rect x="575.28" y="56.40" width="154.16" height="192.70" fill="rgb(157,126,60)" stroke="#fff" stroke-width="0.3"/><text x="652.36" y="161.68" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">28</text><rect x="729.44" y="56.40" width="154.16" height="192.70" fill="rgb(143,118,63)" stroke="#fff" stroke-width="0.3"/><text x="806.52" y="161.68" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">32</text><rect x="112.80" y="249.10" width="154.16" height="192.70" fill="rgb(192,146,51)" stroke="#fff" stroke-width="0.3"/><text x="189.88" y="355.32" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">18</text><rect x="266.96" y="249.10" width="154.16" height="192.70" fill="rgb(178,138,54)" stroke="#fff" stroke-width="0.3"/><text x="344.04" y="355.32" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">22</text><rect x="421.12" y="249.10" width="154.16" height="192.70" fill="rgb(150,122,61)" stroke="#fff" stroke-width="0.3"/><text x="498.20" y="355.32" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">30</text><rect x="575.28" y="249.10" width="154.16" height="192.70" fill="rgb(132,112,66)" stroke="#fff" stroke-width="0.3"/><text x="652.36" y="355.32" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">35</text><rect x="729.44" y="249.10" width="154.16" height="192.70" fill="rgb(114,103,70)" stroke="#fff" stroke-width="0.3"/><text x="806.52" y="355.32" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">40</text><rect x="112.80" y="441.80" width="154.16" height="192.70" fill="rgb(167,132,57)" stroke="#fff" stroke-width="0.3"/><text x="189.88" y="547.08" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">25</text><rect x="266.96" y="441.80" width="154.16" height="192.70" fill="rgb(143,118,63)" stroke="#fff" stroke-width="0.3"/><text x="344.04" y="547.08" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">32</text><rect x="421.12" y="441.80" width="154.16" height="192.70" fill="rgb(107,99,72)" stroke="#fff" stroke-width="0.3"/><text x="498.20" y="547.08" text-anchor="middle" font-size="14.1px" fill="#fff" font-weight="700">42</text><rect x="575.28" y="441.80" width="154.16" height="192.70" fill="rgb(86,87,77)" stroke="#fff" stroke-width="0.3"/><text x="652.36" y="547.08" text-anchor="middle" font-size="14.1px" fill="#fff" font-weight="700">48</text><rect x="729.44" y="441.80" width="154.16" height="192.70" fill="rgb(61,73,84)" stroke="#fff" stroke-width="0.3"/><text x="806.52" y="547.08" text-anchor="middle" font-size="14.1px" fill="#fff" font-weight="700">55</text><rect x="112.80" y="634.50" width="154.16" height="192.70" fill="rgb(150,122,61)" stroke="#fff" stroke-width="0.3"/><text x="189.88" y="740.72" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">30</text><rect x="266.96" y="634.50" width="154.16" height="192.70" fill="rgb(121,106,69)" stroke="#fff" stroke-width="0.3"/><text x="344.04" y="740.72" text-anchor="middle" font-size="14.1px" fill="#1a365d" font-weight="700">38</text><rect x="421.12" y="634.50" width="154.16" height="192.70" fill="rgb(79,83,79)" stroke="#fff" stroke-width="0.3"/><text x="498.20" y="740.72" text-anchor="middle" font-size="14.1px" fill="#fff" font-weight="700">50</text><rect x="575.28" y="634.50" width="154.16" height="192.70" fill="rgb(50,67,86)" stroke="#fff" stroke-width="0.3"/><text x="652.36" y="740.72" text-anchor="middle" font-size="14.1px" fill="#fff" font-weight="700">58</text><rect x="729.44" y="634.50" width="154.16" height="192.70" fill="rgb(26,54,93)" stroke="#fff" stroke-width="0.3"/><text x="806.52" y="740.72" text-anchor="middle" font-size="14.1px" fill="#fff" font-weight="700">65</text></svg></figure></div>
+
+<p>以A组加权成本15.48元/股为基准：</p>
+<p>| 折扣率 | 每股价格 | 13.73%总对价 | 对应PS(36.36亿营收) | 可行性 |
+|--------|---------|-------------|---------------------|--------|
+| 7折 | 10.84元 | 4.26亿 | 0.70x | 偏乐观，部分PE可能不接受 |
+| 8折 | 12.38元 | 4.87亿 | 0.80x | <strong>目标价</strong>，天保5亿预算刚好覆盖 |
+| 9折 | 13.93元 | 5.48亿 | 0.90x | 可接受，略超预算 |
+| 成本价 | 15.48元 | 6.09亿 | 1.00x | PE的理想价位 |</p>
+<h3 id="auto-h-117-f9b481">6.3 对B组的&quot;期权式&quot;策略</h3>
+<p>对B组25家（34.13%），天保可设计&quot;期权式&quot;安排：</p>
+<ul>
+<li><strong>现在</strong>：与B组签署《优先受让权框架协议》，约定若B组PE未来选择退出，天保享有优先购买权</li>
+<li><strong>锁定价格公式</strong>：约定以&quot;成本价 × (1 + 年化6% - 已持股年限×2%)&quot;作为价格上限</li>
+<li><strong>好处</strong>：不占用当前资金，但锁定了未来的收购权，防止被截胡</li>
+</ul>
+<h3 id="auto-h-118-762cfc">6.4 B组分派系谈判优先级</h3>
+<p>| 优先级 | 派系 | 持股 | 谈判切入点 | 目标 |
+|--------|------|------|-----------|------|
+| <strong>B-1</strong> | 盈科系(钱明飞) | 12.34% | 已有2家诉讼(盈科价值+吉运)，了解其耐心底线 | 试探是否有&quot;转向退出&quot;意愿 |
+| <strong>B-2</strong> | 长江奇湾 | 2.02% | 已有诉讼信号，长江证券背景 | 了解诉讼进展，评估退出紧迫度 |
+| <strong>B-3</strong> | 安徽金通 | 4.16% | 安徽国资新能源产业基金，GP与国轩高科关联 | 了解其上市配合意愿 |
+| <strong>B-4</strong> | 赛富系(阎焱) | 2.02% | 知名PE，关注IRR | 了解其回报预期和退出时间线 |
+| <strong>B-5</strong> | 海丝稳健 | 3.43% | 青岛国资，B6中最大单一股东 | 国资退出流程和审批要求 |
+| <strong>B-6</strong> | 其余分散PE | 10.16% | 分散持股，各自压力不同 | 通过优先受让权框架协议统一锁定 |</p>
+<hr />
+<h2 id="auto-h-7-ee3532">七、关键风险与应对</h2>
+<p>| 风险 | 等级 | 具体影响 | 应对措施 |
+|------|------|---------|---------|
+| A组PE联合抬价 | 🟠高 | 得知天保要&quot;清退&quot;全部10家，可能形成价格联盟 | 分批次、分派系单独谈判，不暴露全盘计划 |
+| B组盈科系诉讼扩大化 | 🟠高 | 盈科价值+吉运诉讼若蔓延至盈科系6家，可能冲击IPO | 主动与钱明飞沟通，了解其真实诉求 |
+| 上市失败→B组34%集中退出 | 🟠高 | 市场冲击+其他买家竞争，天保面临&quot;抢筹大战&quot; | 提前与B组签优先受让权框架协议 |
+| 启源纳川股权被司法拍卖截胡 | 🟠高 | ATL/宁德时代等产业资本可能竞拍 | 主动推进债务重组而非被动等拍卖 |
+| 星恒章程优先购买权 | 🔴极高 | 每次交易需其他股东放弃优先购买权 | P0优先核实章程条款 |
+| 深创投不同意合作 | 🟡中 | 失去12.92%的一致行动潜力 | 以董事会席位和IPO承销角色作为交换筹码 |</p>
+<hr />
+<h2 id="auto-h-8-112af9">八、下一步行动清单</h2>
+<p>| 优先级 | 行动项 | 目标对象 | 时限 |
+|--------|--------|---------|------|
+| <strong>P0</strong> | 核实星恒章程优先购买权条款 | 星恒法务/工商档案 | 立即 |
+| <strong>P0</strong> | 天眼查VIP批量核实14家待查实体穿透（见核实报告清单） | 海丝稳健/长江奇湾/泉州云柏/丰鼎优泰等 | 1周内 |
+| <strong>P0</strong> | 天眼查VIP深度穿透晋江创合(启诚控股/黄维斯上层结构) | 晋江创合 | 1周内 |
+| <strong>P0</strong> | 与A组海通系3家（已有仲裁）首次接触 | 辽宁海通/海通创新/湖州赟通 | 1周内 |
+| <strong>P0</strong> | 与A组中兵慧明（二审中）首次接触 | 珠海慧明十方 | 1周内 |
+| <strong>P1</strong> | 与A组兴业系2家接触（银行理财子） | 江苏疌泉/福州兴睿 | 2周内 |
+| <strong>P1</strong> | 与苏州袍泽/冯笑建立沟通 | 管理层 | 2周内 |
+| <strong>P1</strong> | 与B组盈科系钱明飞初步沟通 | 盈科系6家 | 1月内 |
+| <strong>P2</strong> | 起草B组《优先受让权框架协议》模板 | B组25家 | 1月内 |
+| <strong>P2</strong> | 与深创投初步接触 | 深创投 | 1月内 |
+| <strong>P2</strong> | 完成A组全部10家的初步报价 | A组全部 | 2月内 |</p>
+<hr />
+<p><em>本报告基于2026年5月26日最新股东名册和对赌协议数据。穿透数据已通过openclaw agent天眼查浏览器+企查查多源交叉验证。21家已确认，14家采用原始版Excel穿透数据(推测来自早期天眼查VIP查询)待核实。详见 <a href="02_%E9%99%84_%E8%82%A1%E4%B8%9C%E7%A9%BF%E9%80%8F%E6%A0%B8%E5%AE%9E%E6%8A%A5%E5%91%8A.md">股东穿透核实报告</a>。</em></p>
