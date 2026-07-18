@@ -3,193 +3,494 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>晶能光电（江西）有限公司 · 项目报告中心</title>
+<title>晶能光电 · 项目报告中心</title>
 <link rel="stylesheet" href="https://jinzhanxiang.github.io/tianbao-projects/assets/report.css">
 <style>
-.decision-banner {
-  background: linear-gradient(135deg, #c53030 0%, #9b2c2c 100%);
-  color: white;
-  padding: 20px 30px;
-  border-radius: 8px;
-  margin: 20px 0;
-  text-align: center;
-  box-shadow: 0 4px 12px rgba(197, 48, 48, 0.3);
+:root {
+  --primary: #1a365d;
+  --accent: #c53030;
+  --bg: #f7fafc;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --text: #2d3748;
+  --muted: #718096;
 }
-.decision-banner .title {
-  font-size: 1.4em;
-  font-weight: bold;
-  margin-bottom: 8px;
-}
-.decision-banner .subtitle {
-  font-size: 1.1em;
-  opacity: 0.95;
-}
-.kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 15px;
-  margin: 20px 0;
-}
-.kpi-card {
-  background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
-  color: white;
-  padding: 15px;
-  border-radius: 8px;
-  text-align: center;
-}
-.kpi-card .kpi-num {
-  font-size: 1.6em;
-  font-weight: bold;
-}
-.kpi-card .kpi-label {
-  font-size: 0.9em;
-  opacity: 0.9;
-  margin-top: 5px;
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+.nav { background: var(--primary); color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+.nav a { color: white; text-decoration: none; opacity: 0.85; margin-left: 18px; font-size: 14px; }
+.nav a:hover { opacity: 1; }
+.container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+.hero { background: linear-gradient(135deg, var(--primary) 0%, #2c5282 100%); color: white; padding: 40px 32px; border-radius: 12px; margin-bottom: 28px; }
+.hero h1 { font-size: 28px; margin-bottom: 8px; }
+.hero p { opacity: 0.9; font-size: 15px; margin-bottom: 24px; }
+.hero-stats { display: flex; gap: 32px; flex-wrap: wrap; }
+.hero-stat { background: rgba(255,255,255,0.15); padding: 12px 20px; border-radius: 8px; min-width: 110px; }
+.hero-stat .num { font-size: 28px; font-weight: 700; }
+.hero-stat .lbl { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+.tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 24px; }
+.tab { padding: 14px 24px; cursor: pointer; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+.tab:hover { color: var(--primary); }
+.tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+.tab-count { background: var(--primary); color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px; margin-left: 6px; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+.timeline { position: relative; padding-left: 32px; }
+.timeline::before { content: ''; position: absolute; left: 8px; top: 8px; bottom: 8px; width: 2px; background: var(--border); }
+.tl-item { position: relative; margin-bottom: 28px; padding-left: 20px; }
+.tl-item::before { content: ''; position: absolute; left: -28px; top: 8px; width: 14px; height: 14px; border-radius: 50%; background: var(--primary); border: 3px solid white; box-shadow: 0 0 0 2px var(--primary); }
+.tl-item.tl-main::before { background: var(--primary); }
+.tl-item.tl-thirdparty::before { background: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.tl-item.tl-meeting::before { background: #d69e2e; box-shadow: 0 0 0 2px #d69e2e; }
+.tl-item.tl-first::before { background: #38a169; box-shadow: 0 0 0 2px #38a169; }
+.tl-date { color: var(--muted); font-size: 13px; margin-bottom: 4px; }
+.tl-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+.tl-desc { color: var(--muted); font-size: 14px; margin-bottom: 10px; }
+.tl-link { display: inline-block; padding: 6px 14px; background: var(--primary); color: white; text-decoration: none; border-radius: 6px; font-size: 14px; }
+.tl-link:hover { background: #2c5282; }
+.report-group { margin-bottom: 32px; }
+.rg-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+.r-card { display: flex; align-items: center; gap: 16px; padding: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; text-decoration: none; color: var(--text); transition: all 0.2s; }
+.r-card:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(26,54,93,0.1); }
+.r-emoji { font-size: 24px; }
+.r-body { flex: 1; }
+.r-name { font-weight: 600; margin-bottom: 4px; }
+.r-meta { font-size: 13px; color: var(--muted); }
+.r-arrow { color: var(--muted); font-size: 18px; }
+.archived { opacity: 0.7; border-style: dashed; }
+.archived-note { background: #fef5e7; border-left: 4px solid #d69e2e; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; font-size: 14px; color: #744210; }
+@media (max-width: 768px) {
+  .hero { padding: 24px 20px; }
+  .hero h1 { font-size: 22px; }
+  .hero-stats { gap: 16px; }
+  .tab { padding: 12px 16px; font-size: 14px; }
 }
 </style>
 </head>
 <body>
-<div class="back-nav">
-  <a href="https://jinzhanxiang.github.io/tianbao-projects/">← 返回报告中心</a>
-  <span class="project-title">天保控股 · 项目管理</span>
-</div>
-
-<!-- 决策横幅 V3.48.0 -->
-<div class="decision-banner">
-  <div class="title">🔴 暂缓推进 + 季度检查点（V3.48.0）</div>
-  <div class="subtitle">§18.5 多估值方法学自主裁决 | 晶能光电</div>
-</div>
-
-<!-- KPI 卡 -->
-<div class="kpi-grid">
-  <div class="kpi-card">
-    <div class="kpi-num">30-80亿</div>
-    <div class="kpi-label">估值区间</div>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-num">50-55亿</div>
-    <div class="kpi-label">中位数</div>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-num">40-50亿</div>
-    <div class="kpi-label">融资锚定</div>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-num">暂缓</div>
-    <div class="kpi-label">决策</div>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-num">3件事</div>
-    <div class="kpi-label">季度检查点</div>
+<div class="nav">
+  <div>📊 晶能光电</div>
+  <div>
+    <a href="https://jinzhanxiang.github.io/tianbao-projects/">← 返回主中心</a>
   </div>
 </div>
 
-<div class="hero">
-  <h1>💎 晶能光电（江西）有限公司</h1>
-  <p>LED 硅衬底技术领军企业 · 储备·非上市 · 6 份报告 · 双视图导航</p>
-  <div class="hero-stats">
-    <div class="hero-stat"><div class="num">6</div><div class="lbl">报告总数</div></div>
-    <div class="hero-stat"><div class="num">4</div><div class="lbl">时间节点</div></div>
-    <div class="hero-stat"><div class="num">5</div><div class="lbl">报告清单</div></div>
-  </div>
-</div>
-<div class="tabs">
-  <div class="tab active" data-tab="timeline">📅 时间线视图<span class="tab-count">4</span></div>
-  <div class="tab" data-tab="reports">📋 全部报告总览<span class="tab-count">6</span></div>
-</div>
 <div class="container">
+  <div class="hero">
+    <h1>晶能光电</h1>
+    <p>江西有限公司 · 硬科技·新材料 · 重大并购 · 9 份有效报告 · 主报告V15.2.14 · 部署 2026-07-18</p>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="num">9</div><div class="lbl">有效报告</div></div>
+      <div class="hero-stat"><div class="num">19</div><div class="lbl">已归档</div></div>
+      <div class="hero-stat"><div class="num">V15.2.14</div><div class="lbl">主报告版本</div></div>
+      <div class="hero-stat"><div class="num">详见方案</div><div class="lbl">硬科技·化合物半导体</div></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="timeline">📅 时间线视图<span class="tab-count">28</span></div>
+    <div class="tab" data-tab="reports">📋 全部报告总览<span class="tab-count">9</span></div>
+  </div>
+
   <div class="tab-panel active" id="panel-timeline">
     <div class="timeline">
-      <!-- V3.48.0 最新 -->
       <div class="tl-item tl-main">
-        <div class="tl-dot"></div>
         <div class="tl-date">2026-07-12</div>
-        <div class="tl-title">📊 晶能光电商业尽调 V3.48.0 §18.5自主裁决版</div>
-        <div class="tl-desc">多估值方法学融合 30-80 亿区间，暂缓推进 + 季度检查点</div>
-        <div class="tl-links">
-          <a href="https://jinzhanxiang.github.io/jngd-report/report_v3_48_0_deep.html" class="tl-link" target="_blank"><span>📊</span>桌面版</a>
-          <a href="https://jinzhanxiang.github.io/jngd-report/report_v3_48_0_deep_m.html" class="tl-link" target="_blank"><span>📱</span>移动版</a>
-        </div>
+        <div class="tl-title">📜 商业尽调深度增强版（V3.48.0）</div>
+        <div class="tl-desc">V3.48.0 深度模式完善版</div>
+        <a class="tl-link" href="report_v3_48_0_deep_enhanced.html">📊 查看报告</a>
       </div>
-      <!-- V3.43.0 -->
       <div class="tl-item tl-main">
-        <div class="tl-dot"></div>
-        <div class="tl-date">2026-07-04</div>
-        <div class="tl-title">📊 晶能光电商业尽调 V3.43.0 深度模式完善版</div>
-        <div class="tl-desc">在 3 个核心模块（行业分析/财务分析/竞争分析）上深化，启动深度调研版本</div>
-        <div class="tl-links"><a href="https://jinzhanxiang.github.io/jngd-report/report_v3_43_0_deep.html" class="tl-link" target="_blank"><span>📊</span>深度版</a></div>
-      </div>
-      <!-- V3.42.5 -->
-      <div class="tl-item tl-analysis">
-        <div class="tl-dot"></div>
-        <div class="tl-date">2026-07-03</div>
-        <div class="tl-title">📊 晶能光电商业尽调 V3.42.5 原版</div>
-        <div class="tl-desc">基础版完成，覆盖 LED 硅衬底 + 财务 + 竞争三大块</div>
-        <div class="tl-links"><a href="https://jinzhanxiang.github.io/jngd-report/report_v3_42_5_original.html" class="tl-link" target="_blank"><span>📊</span>原版</a></div>
-      </div>
-      <!-- v1.1 -->
-      <div class="tl-item tl-first">
-        <div class="tl-dot"></div>
         <div class="tl-date">2026-06-29</div>
-        <div class="tl-title">📊 晶能光电商业尽调分析报告（v1.1）</div>
-        <div class="tl-desc">主公指派人协作，从 MD 源文件生成 HTML，首次出报告</div>
-        <div class="tl-links"><a href="https://jinzhanxiang.github.io/jngd-report/report_main.html" class="tl-link" target="_blank"><span>📊</span>主报告</a></div>
+        <div class="tl-title">📜 商业尽调分析报告（入口版）</div>
+        <div class="tl-desc">主报告全文入口</div>
+        <a class="tl-link" href="report_main.html">📊 查看报告</a>
+      </div>
+      <div class="tl-item ">
+        <div class="tl-date">2026-07-10</div>
+        <div class="tl-title">📜 V3.43.1 深度模式完善版</div>
+        <div class="tl-desc">V3.43.1 深度模式完善版（V15.2.5 修复前的中间态）</div>
+        <a class="tl-link" href="report_v3_43_1_deep.html">📊 查看报告</a>
+      </div>
+      <div class="tl-item ">
+        <div class="tl-date">2026-07-10</div>
+        <div class="tl-title">📜 V3.43.0 深度模式完善版（早期）</div>
+        <div class="tl-desc">V3.43.0 早期深度模式版</div>
+        <a class="tl-link" href="report_v3_43_0_deep.html">📊 查看报告</a>
+      </div>
+      <div class="tl-item ">
+        <div class="tl-date">2026-07-10</div>
+        <div class="tl-title">📜 V3.42.5 原版（保留历史入口）</div>
+        <div class="tl-desc">V3.42.5 原版（V15.2.5 修复前基线）</div>
+        <a class="tl-link" href="report_v3_42_5_original.html">📊 查看报告</a>
+      </div>
+      <div class="tl-item ">
+        <div class="tl-date">2026-06-15</div>
+        <div class="tl-title">📜 挑战杯/学子路演页 V3</div>
+        <div class="tl-desc">挑战杯/学子路演页 V3</div>
+        <a class="tl-link" href="projects/jneng_challenge_b_v3.html">📊 查看报告</a>
+      </div>
+      <div class="tl-item tl-meeting">
+        <div class="tl-date">2026-06-15</div>
+        <div class="tl-title">📜 晶能专项 V1.1</div>
+        <div class="tl-desc">晶能专项 V1.1</div>
+        <a class="tl-link" href="projects/jneng_v11.html">📊 查看报告</a>
+      </div>
+      <div class="tl-item ">
+        <div class="tl-date">2026-06-10</div>
+        <div class="tl-title">📜 晶能 V3426 vs 公告 专项对比</div>
+        <div class="tl-desc">晶能 V3426 vs 公告 专项对比</div>
+        <a class="tl-link" href="projects/jneng_v3426_vs_CC.html">📊 查看报告</a>
+      </div>
+      <div class="tl-item tl-meeting">
+        <div class="tl-date">2026-07-15</div>
+        <div class="tl-title">📜 V15.2.13 其他项目验证报告 V3</div>
+        <div class="tl-desc">V15.2.13 黄金线 · 其他项目验证产物 V3</div>
+        <a class="tl-link" href="verify_v15213_other_v3.html">📊 查看报告</a>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-15 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 V15.2.14 锁定版基线（被 V3.48.0 增强版取代）</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-15 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 V15.2.13 锁定版（黄金线）</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-11 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 V15.2.7 修复版</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-11 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 V15.2.7 fix3 版</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-12 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 V15.2.5 去重 V2（V15.2.6 修复前的过渡）</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-12 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 V15.2.5 去重 V1</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-12 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 V15.2.5 修复版</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-12 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 V15.2.6 锁定版（V15.2.7→V15.2.13 中间版）</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-12 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 V15.2.4 中间版</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-11 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 V15.2.3 中间版</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-11 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 V15.2.1 中间版</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-11 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 V15.2 原始版</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-10 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 report_final 原始版</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-09 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 V15 原始版</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-08 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 V14 早期版</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-11 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 V3.48.0 深度模式版（V3.48.0 增强版前的基础版）</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-11 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 V3.48.0 深度模式手机版（V11h 永久豁免·不入 manifest）</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-15 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 V15.2.13 验证报告 V1</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
+      </div>
+      <div class="tl-item tl-thirdparty">
+        <div class="tl-date">2026-07-15 → 已归档 2026-07-18</div>
+        <div class="tl-title">🗄 V15.2.13 验证报告 V2</div>
+        <div class="tl-desc">已从仓库删除，git 历史可找回</div>
       </div>
     </div>
   </div>
+
   <div class="tab-panel" id="panel-reports">
     <div class="report-group">
-      <div class="rg-title">📋 V3.48.0 最新版（§18.5 自主裁决）</div>
-      <div class="rg-grid">
-        <a class="r-card" href="https://jinzhanxiang.github.io/jngd-report/report_v3_48_0_deep.html" target="_blank">
-          <div class="r-emoji">📊</div>
-          <div class="r-body">
-            <div class="r-name">V3.48.0 桌面版 <span class="r-badge">最新</span></div>
-            <div class="r-meta">2026-07-12 · 30-80亿估值/暂缓推进</div>
-          </div>
-          <div class="r-arrow">→</div>
-        </a>
-        <a class="r-card" href="https://jinzhanxiang.github.io/jngd-report/report_v3_48_0_deep_m.html" target="_blank">
-          <div class="r-emoji">📱</div>
-          <div class="r-body">
-            <div class="r-name">V3.48.0 移动版</div>
-            <div class="r-meta">2026-07-12 · 响应式布局</div>
-          </div>
-          <div class="r-arrow">→</div>
-        </a>
-      </div>
+      <div class="rg-title">📊 主报告</div>
+      <a class="r-card" href="report_v3_48_0_deep_enhanced.html" target="_blank">
+        <div class="r-emoji">📊</div>
+        <div class="r-body">
+          <div class="r-name">商业尽调深度增强版（V3.48.0）</div>
+          <div class="r-meta">2026-07-12 · 主报告, V3.48.0, 深度增强</div>
+        </div>
+        <div class="r-arrow">→</div>
+      </a>
+      <a class="r-card" href="report_main.html" target="_blank">
+        <div class="r-emoji">📊</div>
+        <div class="r-body">
+          <div class="r-name">商业尽调分析报告（入口版）</div>
+          <div class="r-meta">2026-06-29 · 主报告, 入口</div>
+        </div>
+        <div class="r-arrow">→</div>
+      </a>
     </div>
     <div class="report-group">
-      <div class="rg-title">📋 历史版本（决策参考）</div>
-      <div class="rg-grid">
-        <a class="r-card" href="https://jinzhanxiang.github.io/jngd-report/report_v3_43_0_deep.html" target="_blank">
-          <div class="r-emoji">📊</div>
-          <div class="r-body">
-            <div class="r-name">V3.43.0 深度模式</div>
-            <div class="r-meta">2026-07-04 · PE锚定75亿</div>
-          </div>
-          <div class="r-arrow">→</div>
-        </a>
-        <a class="r-card" href="https://jinzhanxiang.github.io/jngd-report/report_v3_42_5_original.html" target="_blank">
-          <div class="r-emoji">📊</div>
-          <div class="r-body">
-            <div class="r-name">V3.42.5 原版</div>
-            <div class="r-meta">2026-07-03 · 基础版</div>
-          </div>
-          <div class="r-arrow">→</div>
-        </a>
-        <a class="r-card" href="https://jinzhanxiang.github.io/jngd-report/report_main.html" target="_blank">
-          <div class="r-emoji">📊</div>
-          <div class="r-body">
-            <div class="r-name">v1.1 主报告</div>
-            <div class="r-meta">2026-06-29 · 首次报告</div>
-          </div>
-          <div class="r-arrow">→</div>
-        </a>
+      <div class="rg-title">📑 其他有效报告</div>
+      <a class="r-card" href="report_v3_43_1_deep.html" target="_blank">
+        <div class="r-emoji">📑</div>
+        <div class="r-body">
+          <div class="r-name">V3.43.1 深度模式完善版</div>
+          <div class="r-meta">2026-07-10 · V3.43, 深度增强</div>
+        </div>
+        <div class="r-arrow">→</div>
+      </a>
+      <a class="r-card" href="report_v3_43_0_deep.html" target="_blank">
+        <div class="r-emoji">📑</div>
+        <div class="r-body">
+          <div class="r-name">V3.43.0 深度模式完善版（早期）</div>
+          <div class="r-meta">2026-07-10 · V3.43, 早期</div>
+        </div>
+        <div class="r-arrow">→</div>
+      </a>
+      <a class="r-card" href="report_v3_42_5_original.html" target="_blank">
+        <div class="r-emoji">📑</div>
+        <div class="r-body">
+          <div class="r-name">V3.42.5 原版（保留历史入口）</div>
+          <div class="r-meta">2026-07-10 · V3.42.5, 原版</div>
+        </div>
+        <div class="r-arrow">→</div>
+      </a>
+      <a class="r-card" href="projects/jneng_challenge_b_v3.html" target="_blank">
+        <div class="r-emoji">📑</div>
+        <div class="r-body">
+          <div class="r-name">挑战杯/学子路演页 V3</div>
+          <div class="r-meta">2026-06-15 · 专项, 挑战杯</div>
+        </div>
+        <div class="r-arrow">→</div>
+      </a>
+      <a class="r-card" href="projects/jneng_v11.html" target="_blank">
+        <div class="r-emoji">📑</div>
+        <div class="r-body">
+          <div class="r-name">晶能专项 V1.1</div>
+          <div class="r-meta">2026-06-15 · 专项, V1.1</div>
+        </div>
+        <div class="r-arrow">→</div>
+      </a>
+      <a class="r-card" href="projects/jneng_v3426_vs_CC.html" target="_blank">
+        <div class="r-emoji">📑</div>
+        <div class="r-body">
+          <div class="r-name">晶能 V3426 vs 公告 专项对比</div>
+          <div class="r-meta">2026-06-10 · 专项, V3426</div>
+        </div>
+        <div class="r-arrow">→</div>
+      </a>
+      <a class="r-card" href="verify_v15213_other_v3.html" target="_blank">
+        <div class="r-emoji">📑</div>
+        <div class="r-body">
+          <div class="r-name">V15.2.13 其他项目验证报告 V3</div>
+          <div class="r-meta">2026-07-15 · V15.2.13, 跨项目验证</div>
+        </div>
+        <div class="r-arrow">→</div>
+      </a>
+    </div>
+    <div class="archived-note">
+      📦 以下 19 份报告已归档（2026-07-18 起不再在线展示）。如需找回，请告知主公从 git 历史取回。
+    </div>
+    <div class="report-group">
+      <div class="rg-title">🗄 已归档（不计入有效报告）</div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">V15.2.14 锁定版基线（被 V3.48.0 增强版取代）</div>
+          <div class="r-meta">2026-07-15 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
+      </div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">V15.2.13 锁定版（黄金线）</div>
+          <div class="r-meta">2026-07-15 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
+      </div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">V15.2.7 修复版</div>
+          <div class="r-meta">2026-07-11 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
+      </div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">V15.2.7 fix3 版</div>
+          <div class="r-meta">2026-07-11 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
+      </div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">V15.2.5 去重 V2（V15.2.6 修复前的过渡）</div>
+          <div class="r-meta">2026-07-12 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
+      </div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">V15.2.5 去重 V1</div>
+          <div class="r-meta">2026-07-12 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
+      </div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">V15.2.5 修复版</div>
+          <div class="r-meta">2026-07-12 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
+      </div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">V15.2.6 锁定版（V15.2.7→V15.2.13 中间版）</div>
+          <div class="r-meta">2026-07-12 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
+      </div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">V15.2.4 中间版</div>
+          <div class="r-meta">2026-07-12 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
+      </div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">V15.2.3 中间版</div>
+          <div class="r-meta">2026-07-11 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
+      </div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">V15.2.1 中间版</div>
+          <div class="r-meta">2026-07-11 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
+      </div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">V15.2 原始版</div>
+          <div class="r-meta">2026-07-11 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
+      </div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">report_final 原始版</div>
+          <div class="r-meta">2026-07-10 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
+      </div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">V15 原始版</div>
+          <div class="r-meta">2026-07-09 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
+      </div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">V14 早期版</div>
+          <div class="r-meta">2026-07-08 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
+      </div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">V3.48.0 深度模式版（V3.48.0 增强版前的基础版）</div>
+          <div class="r-meta">2026-07-11 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
+      </div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">V3.48.0 深度模式手机版（V11h 永久豁免·不入 manifest）</div>
+          <div class="r-meta">2026-07-11 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
+      </div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">V15.2.13 验证报告 V1</div>
+          <div class="r-meta">2026-07-15 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
+      </div>
+      <div class="r-card archived">
+        <div class="r-emoji">🗄</div>
+        <div class="r-body">
+          <div class="r-name">V15.2.13 验证报告 V2</div>
+          <div class="r-meta">2026-07-15 · 已归档</div>
+        </div>
+        <div class="r-arrow">—</div>
       </div>
     </div>
   </div>
+
+  <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--muted); font-size: 13px; text-align: center;">
+    📅 主报告V15.2.14 更新：2026-07-18 · 双视图 dashboard 自动生成（manifest 派生）<br>
+    🔗 <a href="https://jinzhanxiang.github.io/tianbao-projects/" style="color: var(--primary);">天保控股项目中心</a> · 仓库 jinzhanxiang/jngd-report
+  </div>
 </div>
+
 <script>
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -197,12 +498,9 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
-    window.scrollTo({top:0, behavior:'smooth'});
+    window.scrollTo({top: 0, behavior: 'smooth'});
   });
 });
 </script>
-<div class="footer">
-  <p>Powered by OpenClaw Project Agent | 2026-07-12 v3.48.0 自主裁决</p>
-</div>
 </body>
 </html>
