@@ -1,274 +1,292 @@
-# 📋 manifest.yml — 晶能光电（江西）有限公司项目报告清单（SSOT）
-# ========================================================
-# 触发：主公 2026-07-18「底层报告库自动关联 detail.html 报告链接」
-# 核心：dashboard.html / detail.html 全部从本文件派生
-# 验证：dpl manifest check jngd-report
-# 上次更新：2026-07-18（v12.2 推广全仓库）
-
 project: jngd-report
 title: 晶能光电
 subtitle: 江西有限公司 · 硬科技·新材料
 stage: 重大并购
 report_version: V15.2.14
-last_update: 2026-07-18
-
-# 报告卡片背景资料（dashboard Hero 区用）
+last_update: '2026-07-18'
 hero:
   category: 硬科技·化合物半导体
   amount: 详见方案
   highlight: 尽调完成 · 主报告 V15.2.14 锁定
-
-# 报告清单（dashboard 时间线 + detail.html 全部报告清单唯一数据源）
-# status:
-#   active   = 有效报告（dashboard / detail.html 显示）
-#   archived = 已归档（dashboard 显示在"已归档"分组，不计入有效统计）
 reports:
-  # ─── 主报告最新版（2 份）───
-  - file: report_v3_48_0_deep_enhanced.html
-    title: 商业尽调深度增强版（V3.48.0）
-    date: 2026-07-12
-    status: active
-    tags: [主报告, V3.48.0, 深度增强]
-    desc: V3.48.0 深度模式完善版
-    color: main
-
-  - file: report_main.html
-    title: 商业尽调分析报告（入口版）
-    date: 2026-06-29
-    status: active
-    tags: [主报告, 入口]
-    desc: 主报告全文入口
-    color: main
-
-  # ─── 早期主报告迭代版（3 份·按版本号递增）───
-  - file: report_v3_43_1_deep.html
-    title: V3.43.1 深度模式完善版
-    date: 2026-07-10
-    status: active
-    tags: [V3.43, 深度增强]
-    desc: V3.43.1 深度模式完善版（V15.2.5 修复前的中间态）
-    color: default
-
-  - file: report_v3_43_0_deep.html
-    title: V3.43.0 深度模式完善版（早期）
-    date: 2026-07-10
-    status: active
-    tags: [V3.43, 早期]
-    desc: V3.43.0 早期深度模式版
-    color: default
-
-  - file: report_v3_42_5_original.html
-    title: V3.42.5 原版（保留历史入口）
-    date: 2026-07-10
-    status: active
-    tags: [V3.42.5, 原版]
-    desc: V3.42.5 原版（V15.2.5 修复前基线）
-    color: thirdparty
-
-  # ─── projects/ 子目录专项报告（3 份）───
-  - file: projects/jneng_challenge_b_v3.html
-    title: 挑战杯/学子路演页 V3
-    date: 2026-06-15
-    status: active
-    tags: [专项, 挑战杯]
-    desc: 挑战杯/学子路演页 V3
-    color: meeting
-
-  - file: projects/jneng_v11.html
-    title: 晶能专项 V1.1
-    date: 2026-06-15
-    status: active
-    tags: [专项, V1.1]
-    desc: 晶能专项 V1.1
-    color: meeting
-
-  - file: projects/jneng_v3426_vs_CC.html
-    title: 晶能 V3426 vs 公告 专项对比
-    date: 2026-06-10
-    status: active
-    tags: [专项, V3426]
-    desc: 晶能 V3426 vs 公告 专项对比
-    color: meeting
-
-  # ─── V15.2.13 跨项目验证报告（1 份·V15.2.13 永久教训附产物）───
-  - file: verify_v15213_other_v3.html
-    title: V15.2.13 其他项目验证报告 V3
-    date: 2026-07-15
-    status: active
-    tags: [V15.2.13, 跨项目验证]
-    desc: V15.2.13 黄金线 · 其他项目验证产物 V3
-    color: thirdparty
-
-# ─── 已归档报告（dashboard 折叠显示，detail.html 不展示）───
-# 这些是 V15.2.x 系列与 v14/v15 历史版本，已被 V15.2.14 取代
+- file: report_v3_48_0_deep_enhanced.html
+  title: 商业尽调深度增强版（V3.48.0）
+  date: 2026-07-12
+  status: active
+  tags:
+  - 主报告
+  - V3.48.0
+  - 深度增强
+  desc: V3.48.0 深度模式完善版
+  color: main
+- file: report_main.html
+  title: 商业尽调分析报告（入口版）
+  date: 2026-06-29
+  status: active
+  tags:
+  - 主报告
+  - 入口
+  desc: 主报告全文入口
+  color: main
+- file: report_v3_43_1_deep.html
+  title: V3.43.1 深度模式完善版
+  date: 2026-07-10
+  status: active
+  tags:
+  - V3.43
+  - 深度增强
+  desc: V3.43.1 深度模式完善版（V15.2.5 修复前的中间态）
+  color: default
+- file: report_v3_43_0_deep.html
+  title: V3.43.0 深度模式完善版（早期）
+  date: 2026-07-10
+  status: active
+  tags:
+  - V3.43
+  - 早期
+  desc: V3.43.0 早期深度模式版
+  color: default
+- file: report_v3_42_5_original.html
+  title: V3.42.5 原版（保留历史入口）
+  date: 2026-07-10
+  status: active
+  tags:
+  - V3.42.5
+  - 原版
+  desc: V3.42.5 原版（V15.2.5 修复前基线）
+  color: thirdparty
+- file: projects/jneng_challenge_b_v3.html
+  title: 挑战杯/学子路演页 V3
+  date: 2026-06-15
+  status: active
+  tags:
+  - 专项
+  - 挑战杯
+  desc: 挑战杯/学子路演页 V3
+  color: meeting
+- file: projects/jneng_v11.html
+  title: 晶能专项 V1.1
+  date: 2026-06-15
+  status: active
+  tags:
+  - 专项
+  - V1.1
+  desc: 晶能专项 V1.1
+  color: meeting
+- file: projects/jneng_v3426_vs_CC.html
+  title: 晶能 V3426 vs 公告 专项对比
+  date: 2026-06-10
+  status: active
+  tags:
+  - 专项
+  - V3426
+  desc: 晶能 V3426 vs 公告 专项对比
+  color: meeting
+- file: verify_v15213_other_v3.html
+  title: V15.2.13 其他项目验证报告 V3
+  date: 2026-07-15
+  status: active
+  tags:
+  - V15.2.13
+  - 跨项目验证
+  desc: V15.2.13 黄金线 · 其他项目验证产物 V3
+  color: thirdparty
 deprecated:
-  - file: report_final_v1527_fix3_v15214.html
-    title: V15.2.14 锁定版基线（被 V3.48.0 增强版取代）
-    date: 2026-07-15
-    status: archived
-    tags: [归档, V15.2.14, locked]
-    desc: V15.2.13 黄金线后的 V15.2.14 锁定版基线，被 V3.48.0 取代
-    color: default
-    removed: 2026-07-18
-
-  - file: report_final_v1527_fix3_v15213.html
-    title: V15.2.13 锁定版（黄金线）
-    date: 2026-07-15
-    status: archived
-    tags: [归档, V15.2.13, locked]
-    desc: V15.2.13 黄金线（永久锁定）
-    color: default
-    removed: 2026-07-18
-
-  - file: report_final_v1527.html
-    title: V15.2.7 修复版
-    date: 2026-07-11
-    status: archived
-    tags: [归档, V15.2.7]
-    desc: V15.2.7 修复版（被 V15.2.13 取代）
-    color: default
-    removed: 2026-07-18
-
-  - file: report_final_v1527_fix3.html
-    title: V15.2.7 fix3 版
-    date: 2026-07-11
-    status: archived
-    tags: [归档, V15.2.7]
-    desc: V15.2.7 fix3 修复中间版
-    color: default
-    removed: 2026-07-18
-
-  - file: report_final_v1525_dedup_v2.html
-    title: V15.2.5 去重 V2（V15.2.6 修复前的过渡）
-    date: 2026-07-12
-    status: archived
-    tags: [归档, V15.2.5, dedup]
-    desc: V15.2.5 去重 V2（V15.2.6 修复前的过渡）
-    color: default
-    removed: 2026-07-18
-
-  - file: report_final_v1525_dedup.html
-    title: V15.2.5 去重 V1
-    date: 2026-07-12
-    status: archived
-    tags: [归档, V15.2.5, dedup]
-    desc: V15.2.5 去重 V1
-    color: default
-    removed: 2026-07-18
-
-  - file: report_final_v1525.html
-    title: V15.2.5 修复版
-    date: 2026-07-12
-    status: archived
-    tags: [归档, V15.2.5]
-    desc: V15.2.5 修复版（jngd 报告上下双图修复前的版本）
-    color: default
-    removed: 2026-07-18
-
-  - file: report_final_v1526.html
-    title: V15.2.6 锁定版（V15.2.7→V15.2.13 中间版）
-    date: 2026-07-12
-    status: archived
-    tags: [归档, V15.2.6, locked]
-    desc: V15.2.6 锁定版（chart dedup 修复版）
-    color: default
-    removed: 2026-07-18
-
-  - file: report_final_v1524.html
-    title: V15.2.4 中间版
-    date: 2026-07-12
-    status: archived
-    tags: [归档, V15.2.4]
-    desc: V15.2.4 中间版
-    color: default
-    removed: 2026-07-18
-
-  - file: report_final_v1523.html
-    title: V15.2.3 中间版
-    date: 2026-07-11
-    status: archived
-    tags: [归档, V15.2.3]
-    desc: V15.2.3 中间版
-    color: default
-    removed: 2026-07-18
-
-  - file: report_final_v1521.html
-    title: V15.2.1 中间版
-    date: 2026-07-11
-    status: archived
-    tags: [归档, V15.2.1]
-    desc: V15.2.1 中间版
-    color: default
-    removed: 2026-07-18
-
-  - file: report_final_v152.html
-    title: V15.2 原始版
-    date: 2026-07-11
-    status: archived
-    tags: [归档, V15.2]
-    desc: V15.2 原始版
-    color: default
-    removed: 2026-07-18
-
-  - file: report_final.html
-    title: report_final 原始版
-    date: 2026-07-10
-    status: archived
-    tags: [归档, final]
-    desc: report_final 原始版（被 V15.2+ 系列取代）
-    color: default
-    removed: 2026-07-18
-
-  - file: report_v15.html
-    title: V15 原始版
-    date: 2026-07-09
-    status: archived
-    tags: [归档, V15]
-    desc: V15 原始版（被 V15.2 系列取代）
-    color: default
-    removed: 2026-07-18
-
-  - file: report_v14.html
-    title: V14 早期版
-    date: 2026-07-08
-    status: archived
-    tags: [归档, V14]
-    desc: V14 早期版（被 V15 系列取代）
-    color: default
-    removed: 2026-07-18
-
-  - file: report_v3_48_0_deep.html
-    title: V3.48.0 深度模式版（V3.48.0 增强版前的基础版）
-    date: 2026-07-11
-    status: archived
-    tags: [归档, V3.48.0]
-    desc: V3.48.0 深度模式版（增强版前的基础版）
-    color: default
-    removed: 2026-07-18
-
-  - file: report_v3_48_0_deep_m.html
-    title: V3.48.0 深度模式手机版（V11h 永久豁免·不入 manifest）
-    date: 2026-07-11
-    status: archived
-    tags: [归档, V3.48.0, _m]
-    desc: V3.48.0 深度模式手机版（v12.1 _m.html 永久豁免）
-    color: default
-    removed: 2026-07-18
-
-  - file: verify_v15213_other.html
-    title: V15.2.13 验证报告 V1
-    date: 2026-07-15
-    status: archived
-    tags: [归档, V15.2.13, V1]
-    desc: V15.2.13 验证报告 V1（被 V3 取代）
-    color: default
-    removed: 2026-07-18
-
-  - file: verify_v15213_other_v2.html
-    title: V15.2.13 验证报告 V2
-    date: 2026-07-15
-    status: archived
-    tags: [归档, V15.2.13, V2]
-    desc: V15.2.13 验证报告 V2（被 V3 取代）
-    color: default
-    removed: 2026-07-18
+- file: report_final_v1527_fix3_v15214.html
+  title: V15.2.14 锁定版基线（被 V3.48.0 增强版取代）
+  date: 2026-07-15
+  status: archived
+  tags:
+  - 归档
+  - V15.2.14
+  - locked
+  desc: V15.2.13 黄金线后的 V15.2.14 锁定版基线，被 V3.48.0 取代
+  color: default
+  removed: 2026-07-18
+- file: report_final_v1527_fix3_v15213.html
+  title: V15.2.13 锁定版（黄金线）
+  date: 2026-07-15
+  status: archived
+  tags:
+  - 归档
+  - V15.2.13
+  - locked
+  desc: V15.2.13 黄金线（永久锁定）
+  color: default
+  removed: 2026-07-18
+- file: report_final_v1527.html
+  title: V15.2.7 修复版
+  date: 2026-07-11
+  status: archived
+  tags:
+  - 归档
+  - V15.2.7
+  desc: V15.2.7 修复版（被 V15.2.13 取代）
+  color: default
+  removed: 2026-07-18
+- file: report_final_v1527_fix3.html
+  title: V15.2.7 fix3 版
+  date: 2026-07-11
+  status: archived
+  tags:
+  - 归档
+  - V15.2.7
+  desc: V15.2.7 fix3 修复中间版
+  color: default
+  removed: 2026-07-18
+- file: report_final_v1525_dedup_v2.html
+  title: V15.2.5 去重 V2（V15.2.6 修复前的过渡）
+  date: 2026-07-12
+  status: archived
+  tags:
+  - 归档
+  - V15.2.5
+  - dedup
+  desc: V15.2.5 去重 V2（V15.2.6 修复前的过渡）
+  color: default
+  removed: 2026-07-18
+- file: report_final_v1525_dedup.html
+  title: V15.2.5 去重 V1
+  date: 2026-07-12
+  status: archived
+  tags:
+  - 归档
+  - V15.2.5
+  - dedup
+  desc: V15.2.5 去重 V1
+  color: default
+  removed: 2026-07-18
+- file: report_final_v1525.html
+  title: V15.2.5 修复版
+  date: 2026-07-12
+  status: archived
+  tags:
+  - 归档
+  - V15.2.5
+  desc: V15.2.5 修复版（jngd 报告上下双图修复前的版本）
+  color: default
+  removed: 2026-07-18
+- file: report_final_v1526.html
+  title: V15.2.6 锁定版（V15.2.7→V15.2.13 中间版）
+  date: 2026-07-12
+  status: archived
+  tags:
+  - 归档
+  - V15.2.6
+  - locked
+  desc: V15.2.6 锁定版（chart dedup 修复版）
+  color: default
+  removed: 2026-07-18
+- file: report_final_v1524.html
+  title: V15.2.4 中间版
+  date: 2026-07-12
+  status: archived
+  tags:
+  - 归档
+  - V15.2.4
+  desc: V15.2.4 中间版
+  color: default
+  removed: 2026-07-18
+- file: report_final_v1523.html
+  title: V15.2.3 中间版
+  date: 2026-07-11
+  status: archived
+  tags:
+  - 归档
+  - V15.2.3
+  desc: V15.2.3 中间版
+  color: default
+  removed: 2026-07-18
+- file: report_final_v1521.html
+  title: V15.2.1 中间版
+  date: 2026-07-11
+  status: archived
+  tags:
+  - 归档
+  - V15.2.1
+  desc: V15.2.1 中间版
+  color: default
+  removed: 2026-07-18
+- file: report_final_v152.html
+  title: V15.2 原始版
+  date: 2026-07-11
+  status: archived
+  tags:
+  - 归档
+  - V15.2
+  desc: V15.2 原始版
+  color: default
+  removed: 2026-07-18
+- file: report_final.html
+  title: report_final 原始版
+  date: 2026-07-10
+  status: archived
+  tags:
+  - 归档
+  - final
+  desc: report_final 原始版（被 V15.2+ 系列取代）
+  color: default
+  removed: 2026-07-18
+- file: report_v15.html
+  title: V15 原始版
+  date: 2026-07-09
+  status: archived
+  tags:
+  - 归档
+  - V15
+  desc: V15 原始版（被 V15.2 系列取代）
+  color: default
+  removed: 2026-07-18
+- file: report_v14.html
+  title: V14 早期版
+  date: 2026-07-08
+  status: archived
+  tags:
+  - 归档
+  - V14
+  desc: V14 早期版（被 V15 系列取代）
+  color: default
+  removed: 2026-07-18
+- file: report_v3_48_0_deep.html
+  title: V3.48.0 深度模式版（V3.48.0 增强版前的基础版）
+  date: 2026-07-11
+  status: archived
+  tags:
+  - 归档
+  - V3.48.0
+  desc: V3.48.0 深度模式版（增强版前的基础版）
+  color: default
+  removed: 2026-07-18
+- file: report_v3_48_0_deep_m.html
+  title: V3.48.0 深度模式手机版（V11h 永久豁免·不入 manifest）
+  date: 2026-07-11
+  status: archived
+  tags:
+  - 归档
+  - V3.48.0
+  - _m
+  desc: V3.48.0 深度模式手机版（v12.1 _m.html 永久豁免）
+  color: default
+  removed: 2026-07-18
+- file: verify_v15213_other.html
+  title: V15.2.13 验证报告 V1
+  date: 2026-07-15
+  status: archived
+  tags:
+  - 归档
+  - V15.2.13
+  - V1
+  desc: V15.2.13 验证报告 V1（被 V3 取代）
+  color: default
+  removed: 2026-07-18
+- file: verify_v15213_other_v2.html
+  title: V15.2.13 验证报告 V2
+  date: 2026-07-15
+  status: archived
+  tags:
+  - 归档
+  - V15.2.13
+  - V2
+  desc: V15.2.13 验证报告 V2（被 V3 取代）
+  color: default
+  removed: 2026-07-18
