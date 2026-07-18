@@ -9,6 +9,16 @@ hero:
   amount: 详见方案
   highlight: 尽调完成 · 主报告 V15.2.14 锁定
 reports:
+- file: report_v3_43_1_deep.html
+  title: V3.43.1 深度模式完善版
+  date: 2026-07-10
+  status: active
+  tags:
+  - V3.43
+  - 深度增强
+  desc: V3.43.1 深度模式完善版（V15.2.5 修复前的中间态）
+  color: default
+deprecated:
 - file: report_v3_48_0_deep_enhanced.html
   title: 商业尽调深度增强版（V3.48.0）
   date: 2026-07-12
@@ -28,15 +38,6 @@ reports:
   - 入口
   desc: 主报告全文入口
   color: main
-- file: report_v3_43_1_deep.html
-  title: V3.43.1 深度模式完善版
-  date: 2026-07-10
-  status: active
-  tags:
-  - V3.43
-  - 深度增强
-  desc: V3.43.1 深度模式完善版（V15.2.5 修复前的中间态）
-  color: default
 - file: report_v3_43_0_deep.html
   title: V3.43.0 深度模式完善版（早期）
   date: 2026-07-10
@@ -91,7 +92,6 @@ reports:
   - 跨项目验证
   desc: V15.2.13 黄金线 · 其他项目验证产物 V3
   color: thirdparty
-deprecated:
 - file: report_final_v1527_fix3_v15214.html
   title: V15.2.14 锁定版基线（被 V3.48.0 增强版取代）
   date: 2026-07-15
@@ -290,3 +290,5 @@ deprecated:
   desc: V15.2.13 验证报告 V2（被 V3 取代）
   color: default
   removed: 2026-07-18
+meta:
+  clean_test: true
