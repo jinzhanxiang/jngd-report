@@ -8,16 +8,7 @@ hero:
   category: 硬科技·化合物半导体
   amount: 详见方案
   highlight: 尽调完成 · 主报告 V15.2.14 锁定
-reports:
-- file: report_v3_43_1_deep.html
-  title: V3.43.1 深度模式完善版
-  date: 2026-07-10
-  status: active
-  tags:
-  - V3.43
-  - 深度增强
-  desc: V3.43.1 深度模式完善版（V15.2.5 修复前的中间态）
-  color: default
+reports: []
 deprecated:
 - file: report_v3_48_0_deep_enhanced.html
   title: 商业尽调深度增强版（V3.48.0）
@@ -290,5 +281,15 @@ deprecated:
   desc: V15.2.13 验证报告 V2（被 V3 取代）
   color: default
   removed: 2026-07-18
+- file: report_v3_43_1_deep.html
+  title: V3.43.1 深度模式完善版
+  date: 2026-07-10
+  status: active
+  tags:
+  - V3.43
+  - 深度增强
+  desc: V3.43.1 深度模式完善版（V15.2.5 修复前的中间态）
+  color: default
+  removed: '2026-08-01'
 meta:
   clean_test: true
